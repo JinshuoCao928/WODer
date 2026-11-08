@@ -68,3 +68,66 @@ export function recentWindow(sessions, today, days = 14) {
       rpe: s.rpe ?? null, notes: s.notes ?? null,
     }));
 }
+
+export function extractJson(text) {
+  const tries = [text];
+  const fence = /```(?:json)?\s*([\s\S]*?)```/i.exec(text);
+  if (fence) tries.push(fence[1]);
+  const a = text.indexOf('{'), b = text.lastIndexOf('}');
+  if (a !== -1 && b > a) tries.push(text.slice(a, b + 1));
+  for (const t of tries) {
+    try { return JSON.parse(t); } catch { /* try next */ }
+  }
+  throw new Error('no_json');
+}
+
+export const STYLES = ['wod', 'strength', 'conditioning', 'mobility', 'other'];
+const UNITS = ['kg', 'lb'];
+const isNumOrNull = (v) => v == null || (typeof v === 'number' && Number.isFinite(v));
+const isStrOrNull = (v) => v == null || typeof v === 'string';
+
+function checkBlocks(blocks, keepResult) {
+  if (!Array.isArray(blocks) || blocks.length === 0) return { error: 'blocks must be a non-empty array' };
+  const out = [];
+  for (const b of blocks) {
+    if (!b || typeof b.name !== 'string' || !Array.isArray(b.movements)) return { error: 'block needs name and movements' };
+    const movements = [];
+    for (const m of b.movements) {
+      if (!m || typeof m.name !== 'string' || !m.name.trim()) return { error: 'movement needs a name' };
+      if (!isNumOrNull(m.sets) || !isNumOrNull(m.load)) return { error: `bad numbers in ${m.name}` };
+      if (!(m.reps == null || typeof m.reps === 'number' || typeof m.reps === 'string')) return { error: `bad reps in ${m.name}` };
+      if (!(m.unit == null || UNITS.includes(m.unit))) return { error: `bad unit in ${m.name}` };
+      if (!isStrOrNull(m.note)) return { error: `bad note in ${m.name}` };
+      movements.push({ name: normalizeMovementName(m.name), sets: m.sets ?? null, reps: m.reps ?? null,
+        load: m.load ?? null, unit: m.unit ?? null, note: m.note ?? null });
+    }
+    out.push({ name: b.name, format: typeof b.format === 'string' ? b.format : '', movements,
+      result: keepResult && typeof b.result === 'string' ? b.result : null });
+  }
+  return { blocks: out };
+}
+
+const focusOf = (f) => (Array.isArray(f) ? f.filter((x) => typeof x === 'string') : []);
+
+export function validateSession(obj) {
+  if (!obj || typeof obj !== 'object') return { ok: false, error: 'not an object' };
+  if (typeof obj.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(obj.date)) return { ok: false, error: 'date must be YYYY-MM-DD' };
+  if (!STYLES.includes(obj.style)) return { ok: false, error: 'bad style' };
+  const { blocks, error } = checkBlocks(obj.blocks, true);
+  if (error) return { ok: false, error };
+  if (!isNumOrNull(obj.rpe)) return { ok: false, error: 'bad rpe' };
+  return { ok: true, value: {
+    date: obj.date, source: obj.source === 'generated' ? 'generated' : 'logged', style: obj.style,
+    title: typeof obj.title === 'string' ? obj.title : '', focus: focusOf(obj.focus), blocks,
+    rpe: obj.rpe ?? null, notes: typeof obj.notes === 'string' ? obj.notes : null,
+  } };
+}
+
+export function validateWorkout(obj) {
+  if (!obj || typeof obj !== 'object') return { ok: false, error: 'not an object' };
+  if (typeof obj.title !== 'string' || typeof obj.rationale !== 'string') return { ok: false, error: 'title and rationale required' };
+  if (!STYLES.includes(obj.style)) return { ok: false, error: 'bad style' };
+  const { blocks, error } = checkBlocks(obj.blocks, false);
+  if (error) return { ok: false, error };
+  return { ok: true, value: { title: obj.title, rationale: obj.rationale, style: obj.style, focus: focusOf(obj.focus), blocks } };
+}

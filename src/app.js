@@ -1,6 +1,7 @@
 import { buildMovementSummary, recentWindow } from './core.js';
 import * as store from './store.js';
 import { t } from './i18n.js';
+import { wireLog } from './log.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -194,6 +195,7 @@ async function start() {
   applyStrings();
   wireTabs();
   wireProfile();
+  wireLog();
   renderToday();
   renderHistory();
 

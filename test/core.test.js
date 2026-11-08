@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeMovementName, convertLoad, buildMovementSummary, recentWindow, extractJson, validateSession, validateWorkout } from '../src/core.js';
+import { normalizeMovementName, convertLoad, buildMovementSummary, recentWindow, extractJson, validateSession, validateWorkout, buildParsePrompt, buildGeneratePrompt, buildRevisePrompt, STRICT_SUFFIX, WORKOUT_RULES } from '../src/core.js';
 
 test('name variants merge', () => {
   for (const n of ['Front Squats', 'front squat', '  FRONT   squat ', 'FS'])
@@ -79,4 +79,36 @@ test('validateWorkout requires rationale and nulls results', () => {
   const r = validateWorkout(w);
   assert.equal(r.ok, true);
   assert.equal(r.value.blocks[0].result, null);
+});
+
+const RULES = [
+  "Respect the athlete's stated soreness, focus, exclusions, time and equipment.",
+  'Do not heavily load a muscle group trained in the last 48 hours.',
+  'Base loads on the history: working sets about 70-85% of a recent best; a small increase only if the last session was noted as easy. Never exceed 5% above the recorded best.',
+  'Never invent history. If a movement has no history, write "estimate" in its note.',
+  'If the athlete mentions pain or injury (not normal soreness), choose a conservative alternative and suggest seeing a professional in the rationale.',
+  'In each movement note referencing history, cite it like "last: 65kg x5 on 2026-11-02".',
+];
+const ctx = { profile: { unit: 'kg', level: 'intermediate', about: 'BS 120kg' },
+  recent: [{ date: '2026-11-06', movements: [{ name: 'Front squat' }] }],
+  summary: { 'Front squat': { latest: { load: 100 }, best: { load: 105 } } }, today: '2026-11-07' };
+
+test('generate prompt carries inputs and all rules', () => {
+  const p = buildGeneratePrompt({ style: 'strength', request: 'legs sore, back focus', ...ctx });
+  for (const s of ['legs sore, back focus', '2026-11-07', JSON.stringify(ctx.summary), 'BS 120kg', 'strength', 'Reply with ONLY the JSON object.']) assert.ok(p.includes(s), s);
+  for (const r of RULES) assert.ok(p.includes(r), r);
+  assert.deepEqual(RULES.every((r) => WORKOUT_RULES.includes(r)), true);
+});
+
+test('revise prompt carries workout, change and rules', () => {
+  const workout = { title: 'Back day', blocks: [] };
+  const p = buildRevisePrompt({ workout, change: 'swap pull-ups, grip is shot', ...ctx });
+  for (const s of [JSON.stringify(workout), 'swap pull-ups, grip is shot', JSON.stringify(ctx.summary)]) assert.ok(p.includes(s), s);
+  for (const r of RULES) assert.ok(p.includes(r), r);
+});
+
+test('parse prompt carries text, date and known names', () => {
+  const p = buildParsePrompt({ text: 'FS 5x3 @100 yesterday', today: '2026-11-07', unit: 'kg', knownMovements: ['Front squat', 'Pendlay row'] });
+  for (const s of ['FS 5x3 @100 yesterday', '2026-11-07', 'Front squat', 'Pendlay row', '"logged"', 'Reply with ONLY the JSON object.']) assert.ok(p.includes(s), s);
+  assert.match(STRICT_SUFFIX, /ONLY the JSON object/);
 });

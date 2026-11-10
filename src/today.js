@@ -5,6 +5,7 @@ import * as store from './store.js';
 import { t } from './i18n.js';
 import { state, show, hide, renderToday, reloadSessions, historyContext, isReadOnlyError, markReadOnly } from './app.js';
 import { showError, parseSessions } from './log.js';
+import { mergeParsed } from './forms.js';
 
 const $ = (id) => document.getElementById(id);
 let ctrl = null;
@@ -63,7 +64,7 @@ async function saveDone() {
   try {
     if (pendingDone?.w !== w || pendingDone.result !== result) {
       const text = `Planned workout completed on ${today}:\n${JSON.stringify(w)}\n\nAthlete's result: ${result || '(completed as written)'}`;
-      pendingDone = { w, result, session: (await parseSessions(text))[0] };
+      pendingDone = { w, result, session: mergeParsed(await parseSessions(text)) };
     }
   } catch (e) {
     showError('todayError', e, 'log');

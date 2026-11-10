@@ -5,6 +5,7 @@ import * as store from './store.js';
 import { t } from './i18n.js';
 import { MOVEMENTS } from './library.js';
 import { openForm } from './logform.js';
+import { entriesFromSessions } from './forms.js';
 import { state, h, show, hide, renderBlocks, reloadSessions, setAiAvailable, todayISO, isReadOnlyError, markReadOnly } from './app.js';
 
 const $ = (id) => document.getElementById(id);
@@ -45,7 +46,7 @@ function renderPending() {
   list.replaceChildren(...pending.map((entry, i) => {
     const slot = h('div', {});
     const edit = () => openForm(slot, { block: entry.block, date: entry.date, submitLabel: t('doneEditing'),
-      onSubmit: (next) => { pending[i] = next; renderPending(); }, onCancel: renderPending });
+      onSubmit: (next) => { pending[i] = { ...entry, ...next }; renderPending(); }, onCancel: renderPending });
     slot.append(entryCard(entry, [
       h('button', { type: 'button', class: 'secondary', onclick: edit }, t('editCard')),
       h('button', { type: 'button', class: 'secondary danger', onclick: () => { pending.splice(i, 1); renderPending(); } }, t('removeCard')),
@@ -66,7 +67,7 @@ async function readIt() {
   try {
     const sessions = await parseSessions(text);
     if ($('logInput').value.trim() !== text) return; // text was edited while Claude was reading it
-    for (const s of sessions) for (const block of s.blocks) pending.push({ date: s.date, block });
+    pending.push(...entriesFromSessions(sessions));
     $('logInput').value = '';
     renderPending();
   } catch (e) {
@@ -91,9 +92,9 @@ async function saveAll() {
   const total = pending.length;
   try {
     while (pending.length) {
-      const { date, block } = pending[0];
+      const { date, block, rpe = null } = pending[0];
       await store.saveSession(state.db, state.uid, { date, source: 'logged', style: styleForLayout(block.type),
-        title: titleForBlock(block), focus: [], blocks: [block], rpe: null, notes: null, rawText: '' });
+        title: titleForBlock(block), focus: [], blocks: [block], rpe, notes: null, rawText: '' });
       pending.shift();
     }
     renderPending();

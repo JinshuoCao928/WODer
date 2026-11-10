@@ -13,7 +13,7 @@ export const BLOCK_FIELDS = {
 };
 export const MOVE_FIELDS = {
   strength: ['sets', 'reps', 'load'], amrap: ['reps', 'load', 'distance'], fortime: ['reps', 'load', 'distance'],
-  intervals: ['reps', 'load', 'distance'], other: ['reps', 'load', 'distance'],
+  intervals: ['reps', 'load', 'distance'], other: ['sets', 'reps', 'load', 'distance', 'time'], // other also holds v1 / free-form blocks
   heaviest: ['reps', 'load'], fastest: ['distance', 'time'], mostReps: ['reps'], farthest: ['distance'],
 };
 export const blockFieldsFor = (layout, prKind) => (layout === 'pr' && prKind === 'farthest' ? ['prKind', 'minutes'] : BLOCK_FIELDS[layout]);
@@ -37,12 +37,14 @@ export function blockFromForm(v, unit) {
   const bf = blockFieldsFor(type, prKind);
   const mf = moveFieldsFor(type, prKind);
   let movements = v.movements.filter((m) => String(m.name ?? '').trim()).map((m) => {
-    const load = mf.includes('load') ? num(m.load) : null;
+    // An untouched load keeps its original value and unit (no kg↔lb rounding drift).
+    const kept = m.keep && m.load === m.keep.shown;
+    const load = mf.includes('load') ? (kept ? m.keep.load : num(m.load)) : null;
     return {
       name: normalizeMovementName(m.name),
       sets: mf.includes('sets') ? num(m.sets) : null,
       reps: mf.includes('reps') ? reps(m.reps) : null,
-      load, unit: load != null ? m.unit || unit : null,
+      load, unit: load != null ? (kept ? m.keep.unit : m.unit || unit) : null,
       distance: mf.includes('distance') ? text(m.distance) : null,
       time: mf.includes('time') ? time(m.timeMin, m.timeSec) : null,
       note: text(m.note),
@@ -77,8 +79,10 @@ export function formFromBlock(block, date, unit) {
     movements: (block.movements ?? []).map((m) => {
       const load = unit && m.load != null ? convertLoad(m.load, m.unit ?? null, unit) : m.load;
       const [timeMin, timeSec] = splitTime(m.time);
+      const converted = load !== m.load || (unit && m.unit && unit !== m.unit);
       return { name: m.name, sets: str(m.sets), reps: str(m.reps), load: str(load), unit: load != null ? (unit || m.unit || '') : '',
-        distance: m.distance ?? '', timeMin, timeSec, note: m.note ?? '' };
+        distance: m.distance ?? '', timeMin, timeSec, note: m.note ?? '',
+        ...(converted && m.load != null ? { keep: { shown: str(load), load: m.load, unit: m.unit ?? null } } : {}) };
     }),
   };
 }
@@ -104,9 +108,20 @@ export function isScaledFromRx(block, benchmarkName, unit) {
   if (rx.movements.length !== block.movements.length) return true;
   return rx.movements.some((r, i) => {
     const m = block.movements[i];
-    return normalizeMovementName(m.name) !== r.name || convertLoad(m.load ?? null, m.unit ?? null, unit) !== r.load;
+    // Compare the load against Rx in the movement's own unit, so kg↔lb rounding never reads as Scaled.
+    const rxLoad = benchmarkBlock(benchmarkName, m.unit || unit).movements[i].load;
+    return normalizeMovementName(m.name) !== r.name || (m.load ?? null) !== rxLoad;
   });
 }
+
+// Mark done: Claude may split one generated workout into several entries; keep every block.
+export const mergeParsed = (sessions) => ({ ...sessions[0], blocks: sessions.flatMap((s) => s.blocks) });
+
+// Log "Read it": one pending entry per block; the session's notes and RPE travel with each block.
+export const entriesFromSessions = (sessions) => sessions.flatMap((s) => s.blocks.map((b) => ({
+  date: s.date ?? null, rpe: s.rpe ?? null,
+  block: { ...b, note: [b.note, s.notes].filter(Boolean).join(' — ') || null },
+})));
 
 export function weightOptions(unit, extra = []) {
   const [step, max] = unit === 'kg' ? [2.5, 300] : [5, 660];

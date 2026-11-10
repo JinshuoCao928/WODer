@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BENCHMARKS, BENCHMARK_EXTRA_NAMES } from '../src/benchmarks.js';
-import { FORM_FORMATS, benchmarkBlock, isScaledFromRx, weightOptions, blockFromForm, formFromBlock } from '../src/forms.js';
+import { FORM_FORMATS, benchmarkBlock, isScaledFromRx, weightOptions, blockFromForm, formFromBlock, entriesFromSessions, mergeParsed } from '../src/forms.js';
 import { MOVEMENTS } from '../src/library.js';
 import { normalizeMovementName, validateSession } from '../src/core.js';
 
@@ -95,4 +95,36 @@ test('v1 block opens with its result in Note and keeps it', () => {
   const back = blockFromForm(v, 'kg');
   assert.match(back.block.note, /8:12/);
   assert.equal(back.date, '2026-10-01');
+});
+
+test('C1: Mark done keeps every block when Claude splits a workout', () => {
+  const s = mergeParsed([{ date: '2026-11-09', style: 'wod', blocks: [{ name: 'Strength' }] }, { date: '2026-11-09', style: 'wod', blocks: [{ name: 'Metcon' }] }]);
+  assert.deepEqual(s.blocks.map((b) => b.name), ['Strength', 'Metcon']);
+  assert.equal(s.date, '2026-11-09');
+});
+
+test('I1: editing a v1 strength block keeps sets', () => {
+  const v1 = { name: 'Strength', format: '5x5', movements: [{ name: 'Back Squat', sets: 5, reps: 5, load: 100, unit: 'kg' }] };
+  const back = blockFromForm(formFromBlock(v1, '2026-10-01', 'kg'), 'kg').block;
+  assert.equal(back.movements[0].sets, 5);
+  assert.equal(back.movements[0].load, 100);
+});
+
+test('I2: session notes and rpe reach the pending entries', () => {
+  const entries = entriesFromSessions([{ date: null, rpe: 9, notes: 'felt awful', blocks: [{ name: 'Fran', note: 'scaled pull-ups' }, { name: 'B', note: null }] }]);
+  assert.equal(entries.length, 2);
+  assert.equal(entries[0].block.note, 'scaled pull-ups — felt awful');
+  assert.equal(entries[1].block.note, 'felt awful');
+  assert.equal(entries[0].rpe, 9);
+  assert.equal(entries[0].date, null);
+});
+
+test('I3: a load in the other unit is not Scaled and survives an edit unchanged', () => {
+  const grace = { ...benchmarkBlock('Grace', 'kg') };
+  assert.equal(isScaledFromRx(grace, 'Grace', 'lb'), false);
+  const back = blockFromForm(formFromBlock(grace, null, 'lb'), 'lb').block;
+  assert.deepEqual([back.movements[0].load, back.movements[0].unit], [61, 'kg']);
+  assert.equal(isScaledFromRx(back, 'Grace', 'lb'), false);
+  const jackie = benchmarkBlock('Jackie', 'lb');
+  assert.equal(isScaledFromRx(jackie, 'Jackie', 'kg'), false);
 });

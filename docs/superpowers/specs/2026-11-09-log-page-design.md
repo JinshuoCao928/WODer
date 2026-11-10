@@ -11,6 +11,8 @@ Source data: `docs/reference/CrossFit_Complete_Movement_Library.pdf`
 2. After Claude reads typed text, **each workout it finds is its own card** with **Edit** and **Remove** buttons. Edit opens the dropdown form, already filled in.
 3. A workout can be saved **without a date** ("I don't remember").
 4. The dropdowns come from the user's movement library PDF: 489 movements, 17 formats and 25 benchmark WODs.
+5. **Saved workouts can be edited** from History with the same form.
+6. **Scaled workouts:** a benchmark fills in the standard (Rx) weights and movements. The athlete can change any of them, and the workout is then marked **Scaled**.
 
 ## 2. Log page flow
 
@@ -24,12 +26,22 @@ Each card shows its date (or "Date unknown"), type, movements and result, plus *
 - **Save all** saves every card. The welcome banner and the "saved N" message work as in v1.
 - Cards are saved one by one and removed from the list as each save succeeds, so a Retry never saves a card twice. A view-only viewer is handled as in v1.
 
+### 2a. Editing saved workouts (History)
+
+- Each saved workout in History has an **Edit** button next to Delete.
+- In a session with several blocks (a designed workout marked done), each block has its own Edit button, and the session date is edited along with it.
+- **Edit** opens the same form, filled in. **Save changes** writes the whole session record back: same id and `createdAt`, with `updatedAt` set to now. **Cancel** discards the changes.
+- A failed save keeps the form open with Retry, as in Log. A view-only viewer never sees Edit.
+
 ## 3. The form
 
 Fields appear in this order:
 
 1. **Date:** a date picker, defaulting to today, plus an **"I don't remember"** checkbox that disables it and saves `date: null`.
-2. **Benchmark (optional):** a dropdown of the 25 benchmark WODs. Choosing one fills in fields 3–5 with the standard version (§6). Every field stays editable.
+2. **Benchmark (optional):** a dropdown of the 25 benchmark WODs. Choosing one fills in fields 3–5 with the standard version (§6), using the **Rx weight as the default** (e.g. Fran thrusters 95 lb / 43 kg). Every field stays editable.
+   - A **Scaled** checkbox sits next to it. It is ticked automatically when any weight is changed from Rx or a benchmark movement is replaced, and the athlete can also tick or untick it by hand (e.g. jumping pull-ups count as scaled).
+   - The checkbox also appears without a benchmark, for any workout.
+   - When the Rx weight isn't one of the dropdown steps (e.g. 43 kg), it is added to that dropdown as its own option.
 3. **Format:** a dropdown with **Strength** first, then the PDF's 17 formats in PDF order. Each format uses one of six **layouts** (§4).
 4. **Setup fields** for that layout.
 5. **Movements:** one or more rows. Each row has:
@@ -91,6 +103,7 @@ scoreRounds: number|null  // AMRAP rounds / intervals rounds reached
 scoreReps: number|null    // AMRAP extra reps / intervals reps
 scoreTime: string|null    // "m:ss" or "h:mm:ss"
 prKind: "heaviest"|"fastest"|"mostReps"|"farthest"|null
+scaled: boolean           // default false; true = not done as prescribed (lighter load, swapped movement, ...)
 result: string|null       // display text, always regenerated from the fields above when they exist
 ```
 
@@ -112,6 +125,7 @@ result: string|null       // display text, always regenerated from the fields ab
 | PR fastest | `1000m in 3:35` |
 | PR mostReps | `25 reps` |
 | PR farthest | `42 cal in 1 min` |
+| any block with `scaled: true` | the text above + ` (Scaled)`, e.g. `4:32 (Scaled)` |
 
 ## 6. Library data (`src/library.js`, generated)
 
@@ -140,6 +154,7 @@ All 25 PDF benchmarks are included: Fran, Grace, Isabel, Diane, Elizabeth, Karen
   - `latest` comes from dated sessions; it falls back to an undated one only if the movement has no dated entry;
   - `best` counts all sessions, including undated and PR blocks.
 - **The generate prompt** gains a section "Personal records (any date)": `pr` blocks as text, e.g. "Back Squat 3RM 140kg". Load rule 3 already caps loads relative to recorded bests.
+- **Scaled results** reach Claude as "(Scaled)" in the result text and as the actual loads used. Claude should treat the actual load, not Rx, as the athlete's level; the generate rule list gains: "Scaled results show the load the athlete actually used; base suggestions on that, not on Rx." 
 - **History** lists dated sessions newest first, then a **Date unknown** group.
 
 ## 9. Error handling
@@ -160,9 +175,11 @@ All 25 PDF benchmarks are included: Fran, Grace, Isabel, Diane, Elizabeth, Karen
 - `library.js`: 489 movements; group counts match the PDF summary; every FORMAT has a known layout.
 - `BENCHMARKS`: 25 entries; every movement name normalizes to a library movement or is on an allowed list (e.g. "Run", "Pull-Up").
 - The generate prompt includes the PR section.
+- `isScaledFromRx(block, benchmark, unit)` returns true when a load differs from Rx or a movement name differs, and false for an untouched benchmark.
+- `store.updateSession` keeps the id and `createdAt` and sets `updatedAt` (fake-db test).
 
 **Manual check after publishing:** the form at phone width, a benchmark pick, editing a parsed card, and saving an undated workout.
 
 ## 11. Out of scope
 
-Editing already-saved History entries, charts and progress tracking, partner/team scoring, and Today page redesign. These are follow-ups the user has signalled.
+Charts and progress tracking, partner/team scoring, Today page redesign, and men's/women's Rx defaults (the default is the first Rx value; the athlete changes it). These are follow-ups the user has signalled.

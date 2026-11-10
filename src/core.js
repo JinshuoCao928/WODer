@@ -203,6 +203,7 @@ export const WORKOUT_RULES = [
   'Never invent history. If a movement has no history, write "estimate" in its note.',
   'If the athlete mentions pain or injury (not normal soreness), choose a conservative alternative and suggest seeing a professional in the rationale.',
   'In each movement note referencing history, cite it like "last: 65kg x5 on 2026-11-02".',
+  'Scaled results show the load the athlete actually used; base suggestions on that, not on Rx.',
   "Write title, rationale, block names and notes in the same language as the athlete's request; keep movement names in English.",
 ];
 
@@ -210,15 +211,29 @@ const MOVEMENT_TEMPLATE = '{"name": "Pendlay row", "sets": 5, "reps": 5, "load":
 const BLOCKS_TEMPLATE = `[{"name": "Strength", "format": "5x5", "movements": [${MOVEMENT_TEMPLATE}], "result": null}]`;
 const STYLE_ENUM = '"wod" | "strength" | "conditioning" | "mobility" | "other"';
 const FIELD_NOTES = `Field rules: sets, load and rpe are numbers or null; reps is a number, a string like "21-15-9" or "max", or null; unit is "kg", "lb" or null (null for bodyweight); style is one of ${STYLE_ENUM}.`;
+const PARSE_FIELD_NOTES = `Block fields: "type" is one of ${JSON.stringify(LAYOUTS)} (strength = sets x reps at a load; amrap; fortime = for time / rounds for time / chipper / ladders; intervals = EMOM, E2MOM, Tabata, Death By; pr = a personal record; other). "format" is the workout's own name for its format (e.g. "AMRAP", "RFT", "E2MOM", "5x5"). "benchmark" is the benchmark name (Fran, Cindy, ...) or null. amrap: "minutes", "scoreRounds", "scoreReps". fortime: "rounds", "minutes" (time cap), "scoreTime" as "m:ss" or "h:mm:ss". intervals: "every" (minutes), "minutes" (total), "scoreRounds" or "scoreReps". pr: "prKind" is one of ${JSON.stringify(PR_KINDS)} and the block has exactly one movement (heaviest: reps = rep max + load; fastest: movement "distance" + "time" as "m:ss"; mostReps: reps; farthest: movement "distance" like "42 cal" + block "minutes"). Omit fields you don't know.`;
+const PARSE_TEMPLATE = `{"sessions": [
+ {"date": "2026-11-03", "source": "logged", "style": "wod", "title": "Cindy", "focus": ["full body"], "rpe": null, "notes": null,
+  "blocks": [{"name": "Cindy", "type": "amrap", "format": "AMRAP", "benchmark": "Cindy", "minutes": 20, "scoreRounds": 18, "scoreReps": 4, "scaled": false,
+   "movements": [{"name": "Pull-Up", "reps": 5}, {"name": "Push-Up", "reps": 10}, {"name": "Air Squat", "reps": 15}]}]},
+ {"date": null, "source": "logged", "style": "wod", "title": "Fran", "focus": ["full body"], "rpe": null, "notes": null,
+  "blocks": [{"name": "Fran", "type": "fortime", "format": "For Time", "benchmark": "Fran", "scoreTime": "4:32", "scaled": true,
+   "movements": [{"name": "Thruster", "reps": "21-15-9", "load": 65, "unit": "lb"}, {"name": "Pull-Up", "reps": "21-15-9"}]}]},
+ {"date": "2026-11-05", "source": "logged", "style": "strength", "title": "Back Squat 3RM", "focus": ["legs"], "rpe": null, "notes": null,
+  "blocks": [{"name": "Back Squat 3RM", "type": "pr", "format": "Max Effort", "prKind": "heaviest",
+   "movements": [{"name": "Back Squat", "reps": 3, "load": 140, "unit": "kg"}]}]}
+]}`;
 
 const WORKOUT_TEMPLATE = `{"title": "...", "rationale": "one sentence on the main choices", "style": ${STYLE_ENUM}, "focus": ["back"], "blocks": ${BLOCKS_TEMPLATE}}
 Use blocks in this order: Warm-up, Strength/Skill, Main piece, Cooldown.`;
 
-const historySection = ({ profile, recent, summary, today }) =>
+const historySection = ({ profile, recent, summary, today, records }) =>
   `Today: ${today}
 Athlete profile: ${JSON.stringify(profile ?? null)}
 Sessions from the last 14 days (newest first): ${JSON.stringify(recent ?? [])}
-Per-movement latest and best (in the athlete's unit): ${JSON.stringify(summary ?? {})}`;
+Per-movement latest and best (in the athlete's unit): ${JSON.stringify(summary ?? {})}
+Personal records (any date):
+${records?.length ? records.join('\n') : '(none)'}`;
 
 const rulesSection = () => 'Rules:\n' + WORKOUT_RULES.map((r, i) => `${i + 1}. ${r}`).join('\n');
 
@@ -233,15 +248,18 @@ ${text}
 """
 
 Rules:
-- Resolve relative dates such as "yesterday" against today; default to today when no date is given.
+- Resolve relative dates such as "yesterday" against today.
+- If the text gives no date and none can be inferred, set date to null. Never guess a date.
 - Expand abbreviations (e.g. FS = Front squat). One movement entry per distinct movement and load.
 - If no unit is written for a load, use ${unit}.
-- The text may cover one day or many. Output one entry per session (one per training day), oldest first.
+- The text may cover one day or many. One entry per workout (a strength piece and a metcon are two entries). Oldest first, undated last.
+- Set "scaled": true when the text says scaled, or a benchmark was done lighter than Rx or with a substituted movement.
 - Set "source" to "logged". Put anything else noteworthy (how it felt, scaling) in "notes" or the movement "note".
 - ${FIELD_NOTES}
+- ${PARSE_FIELD_NOTES}
 
-Output template:
-{"sessions": [{"date": "YYYY-MM-DD", "source": "logged", "style": ${STYLE_ENUM}, "title": "short title", "focus": ["legs"], "blocks": ${BLOCKS_TEMPLATE}, "rpe": null, "notes": null}]}
+Output template (three example entries):
+${PARSE_TEMPLATE}
 Reply with ONLY the JSON object.`;
 }
 

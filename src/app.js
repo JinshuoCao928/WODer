@@ -1,4 +1,4 @@
-import { buildMovementSummary, recentWindow } from './core.js';
+import { buildMovementSummary, recentWindow, resultText } from './core.js';
 import * as store from './store.js';
 import { t } from './i18n.js';
 import { wireLog } from './log.js';
@@ -30,7 +30,9 @@ export const todayISO = () => new Date().toLocaleDateString('en-CA'); // local Y
 export const historyContext = () => {
   const today = todayISO();
   const sessions = state.historyOk ? state.sessions : [];
-  return { today, profile: state.profile, recent: recentWindow(sessions, today), summary: buildMovementSummary(sessions, state.profile.unit) };
+  const records = sessions.flatMap((s) => (s.blocks ?? []).filter((b) => b.type === 'pr' && b.movements?.[0])
+    .map((b) => `${b.movements[0].name} ${resultText(b) ?? ''}`.trim() + (s.date ? ` (${s.date})` : '')));
+  return { today, profile: state.profile, records, recent: recentWindow(sessions, today), summary: buildMovementSummary(sessions, state.profile.unit) };
 };
 
 export function show(el, text) {

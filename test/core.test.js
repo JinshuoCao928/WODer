@@ -88,6 +88,7 @@ const RULES = [
   'Never invent history. If a movement has no history, write "estimate" in its note.',
   'If the athlete mentions pain or injury (not normal soreness), choose a conservative alternative and suggest seeing a professional in the rationale.',
   'In each movement note referencing history, cite it like "last: 65kg x5 on 2026-11-02".',
+  'Scaled results show the load the athlete actually used; base suggestions on that, not on Rx.',
 ];
 const ctx = { profile: { unit: 'kg', level: 'intermediate', about: 'BS 120kg' },
   recent: [{ date: '2026-11-06', movements: [{ name: 'Front squat' }] }],
@@ -133,7 +134,9 @@ test('validateSessionList rejects an empty or partly bad list', () => {
 test('parse prompt asks for a list of sessions', () => {
   const p = buildParsePrompt({ text: 'Mon: FS 5x3. Tue: rows', today: '2026-11-07', unit: 'kg' });
   assert.ok(p.includes('{"sessions": ['));
-  assert.match(p, /one entry per session/i);
+  assert.ok(p.includes('One entry per workout (a strength piece and a metcon are two entries).'));
+  assert.ok(p.includes('If the text gives no date and none can be inferred, set date to null. Never guess a date.'));
+  assert.ok(p.includes('"scaled"'));
 });
 
 test('names use the library spelling, else title case', () => {
@@ -201,4 +204,10 @@ test('undated sessions: skipped in recent window, sorted last, PR counts as best
   assert.equal(s.latest.date, '2026-11-01');
   assert.equal(s.best.load, 140);
   assert.equal(s.best.date, null);
+});
+
+test('generate prompt lists personal records', () => {
+  const p = buildGeneratePrompt({ style: 'strength', request: 'x', ...ctx, records: ['Back Squat 3RM 140kg'] });
+  assert.ok(p.includes('Personal records (any date):'));
+  assert.ok(p.includes('Back Squat 3RM 140kg'));
 });

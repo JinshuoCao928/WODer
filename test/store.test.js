@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadSessions, saveSession, deleteSession, loadProfile, saveProfile, sessionsPath } from '../src/store.js';
+import { loadSessions, saveSession, updateSession, deleteSession, loadProfile, saveProfile, sessionsPath } from '../src/store.js';
 
 // Minimal in-memory stand-in for the artifact db: only what store.js uses.
 function fakeDb({ hang = false } = {}) {
@@ -66,4 +66,16 @@ test('undated sessions come back last', async () => {
   await saveSession(db, 'u1', { date: '2026-11-01', title: 'A' });
   await saveSession(db, 'u1', { date: '2026-11-05', title: 'B' });
   assert.deepEqual((await loadSessions(db, 'u1')).map((s) => s.title), ['B', 'A', 'U']);
+});
+
+test('updateSession keeps id and createdAt, sets updatedAt', async () => {
+  const db = fakeDb();
+  const id = await saveSession(db, 'u1', { date: '2026-11-01', title: 'A' });
+  const [saved] = await loadSessions(db, 'u1');
+  await updateSession(db, 'u1', id, { ...saved, createdAt: 5, title: 'B' });
+  const doc = db.docs.get(`data/users/u1/profile/sessions/${id}`);
+  assert.equal(doc.title, 'B');
+  assert.equal(doc.createdAt, 5);
+  assert.equal(typeof doc.updatedAt, 'number');
+  assert.equal('id' in doc, false);
 });

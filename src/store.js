@@ -30,6 +30,11 @@ export async function saveSession(db, uid, session) {
   return id;
 }
 
+export async function updateSession(db, uid, id, session) {
+  const { id: _ignored, ...body } = session;
+  await db.collection(sessionsPath(uid)).doc(id).set(plain({ ...body, updatedAt: Date.now() }));
+}
+
 export async function deleteSession(db, uid, id) {
   await db.collection(sessionsPath(uid)).doc(id).delete();
 }

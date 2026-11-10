@@ -3,12 +3,15 @@ import { buildParsePrompt, buildMovementSummary, validateSessionList } from './c
 import { askJson, errorKey } from './claude.js';
 import * as store from './store.js';
 import { t } from './i18n.js';
+import { MOVEMENTS } from './library.js';
 import { state, h, show, hide, renderBlocks, reloadSessions, setAiAvailable, todayISO, isReadOnlyError, markReadOnly } from './app.js';
 
 const $ = (id) => document.getElementById(id);
 let parsed = null; // sessions still waiting to be saved
 
-export const knownMovements = () => Object.keys(buildMovementSummary(state.historyOk ? state.sessions : [], state.profile.unit));
+// Library names first, then any of the athlete's own names the library doesn't have.
+export const knownMovements = () => [...new Set([...MOVEMENTS.map((m) => m.name),
+  ...Object.keys(buildMovementSummary(state.historyOk ? state.sessions : [], state.profile.unit))])];
 
 // Ask Claude to turn free text into validated sessions (used by Log and by Mark done).
 export const parseSessions = (text, opts = {}) => askJson(state.sample,

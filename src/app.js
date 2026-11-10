@@ -1,7 +1,8 @@
 import { buildMovementSummary, recentWindow, resultText } from './core.js';
 import * as store from './store.js';
 import { t } from './i18n.js';
-import { wireLog } from './log.js';
+import { wireLog, titleForBlock, styleForLayout } from './log.js';
+import { openForm } from './logform.js';
 import { wireToday } from './today.js';
 
 const $ = (id) => document.getElementById(id);
@@ -108,7 +109,8 @@ export function renderHistory() {
   const list = $('historyList');
   $('historyEmpty').hidden = state.sessions.length > 0;
   $('historyCount').textContent = state.sessions.length ? t('lastSessions', state.sessions.length) : '';
-  list.replaceChildren(...state.sessions.map((s) => {
+  const firstUndated = state.sessions.findIndex((s) => s.date == null);
+  list.replaceChildren(...state.sessions.flatMap((s, si) => {
     const del = h('button', { class: 'secondary danger', type: 'button' }, t('deleteSession'));
     let armed = null;
     del.addEventListener('click', async () => {
@@ -129,15 +131,35 @@ export function renderHistory() {
         setBanner(t('failed') + (e?.message ?? e), true);
       }
     });
-    return h('li', {}, h('details', {},
+    // Each block can be edited on its own; the session date is edited with it.
+    const blocks = (s.blocks ?? []).map((b, i) => {
+      const slot = h('div', {}, renderBlocks([b]));
+      if (state.db) slot.append(h('div', { class: 'row' }, h('button', { type: 'button', class: 'secondary', onclick: () =>
+        openForm(slot, { block: b, date: s.date, submitLabel: t('saveChanges'), onCancel: renderHistory,
+          onSubmit: async ({ date, block }) => {
+            const updated = { ...s, date, blocks: s.blocks.map((x, j) => (j === i ? block : x)) };
+            if (s.blocks.length === 1) Object.assign(updated, { title: titleForBlock(block), style: styleForLayout(block.type) });
+            try {
+              await store.updateSession(state.db, state.uid, s.id, updated);
+              setBanner('');
+              await reloadSessions();
+            } catch (e) {
+              if (isReadOnlyError(e)) return markReadOnly();
+              setBanner(t('saveFailed'), true); // the form stays open; Save changes again retries
+            }
+          } }) }, t('editCard'))));
+      return slot;
+    });
+    const group = si === firstUndated ? h('li', { class: 'history-group' }, t('dateUnknown')) : null;
+    return [group, h('li', {}, h('details', {},
       h('summary', {},
-        h('span', { class: 'h-date' }, s.date),
+        h('span', { class: 'h-date' }, s.date ?? '—'),
         h('span', { class: 'h-title' }, s.title || s.blocks?.[0]?.movements?.[0]?.name || '—'),
         h('span', { class: 'h-style' }, styleLabel(s.style || 'other'))),
       h('div', { class: 'h-body' },
-        renderBlocks(s.blocks ?? []),
+        blocks,
         s.notes ? h('p', { class: 'msg' }, s.notes) : null,
-        state.db ? h('div', { class: 'row' }, del) : null)));
+        state.db ? h('div', { class: 'row' }, del) : null)))].filter(Boolean);
   }));
 }
 

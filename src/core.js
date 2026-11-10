@@ -128,7 +128,8 @@ function checkBlocks(blocks, keepResult, defaultUnit = null) {
     const block = { name: b.name, type, format: typeof b.format === 'string' ? b.format : '',
       benchmark: b.benchmark ?? null, minutes: b.minutes ?? null, every: b.every ?? null, rounds: b.rounds ?? null,
       scoreRounds: b.scoreRounds ?? null, scoreReps: b.scoreReps ?? null, scoreTime: b.scoreTime ?? null,
-      prKind: type === 'pr' ? b.prKind ?? null : null, scaled: b.scaled === true, movements };
+      prKind: type === 'pr' ? b.prKind ?? null : null, scaled: b.scaled === true,
+      note: typeof b.note === 'string' && b.note.trim() ? b.note : null, movements };
     block.result = resultText(block) ?? (keepResult && typeof b.result === 'string' ? b.result : null);
     out.push(block);
   }

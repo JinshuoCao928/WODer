@@ -119,6 +119,7 @@ export function renderHistory() {
         state.sessions = state.sessions.filter((x) => x.id !== s.id);
         renderHistory();
       } catch (e) {
+        if (isReadOnlyError(e)) return markReadOnly();
         del.disabled = false;
         setBanner(t('failed') + (e?.message ?? e), true);
       }
@@ -157,6 +158,7 @@ function wireProfile() {
       show('profileMsg', t('profileSaved'));
       renderHistory();
     } catch (e) {
+      if (isReadOnlyError(e)) return markReadOnly();
       show('profileMsg', t('failed') + (e?.message ?? e));
     }
   });
@@ -170,9 +172,11 @@ function applyStrings() {
   $('todayDate').textContent = todayISO();
 }
 
+export let selectTab = () => {};
+
 function wireTabs() {
   const tabs = [...document.querySelectorAll('nav.tabs button')];
-  const select = (name) => {
+  const select = selectTab = (name) => {
     for (const b of tabs) {
       const on = b.dataset.tab === name;
       b.setAttribute('aria-selected', String(on));
@@ -184,6 +188,15 @@ function wireTabs() {
   let saved = null;
   try { saved = localStorage.getItem('woder.tab'); } catch { /* storage unavailable */ }
   if (saved && $('panel-' + saved)) select(saved);
+}
+
+// A view-only member has a uid but every write to data/users/<uid>/ rejects invalid_argument (db.d.ts).
+export const isReadOnlyError = (e) => e?.code === 'invalid_argument';
+export function markReadOnly() {
+  state.db = null;
+  setBanner(t('viewOnly'));
+  renderToday();
+  renderHistory();
 }
 
 export function setAiAvailable(on) {
@@ -218,6 +231,7 @@ async function start() {
     if (profile) state.profile = { ...state.profile, ...profile };
     renderProfile();
     await reloadSessions();
+    if (state.sessions.length === 0) { selectTab('log'); show('welcome'); }
   } catch {
     setBanner(t('historyFailed'), true);
   }

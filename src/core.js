@@ -86,7 +86,7 @@ const UNITS = ['kg', 'lb'];
 const isNumOrNull = (v) => v == null || (typeof v === 'number' && Number.isFinite(v));
 const isStrOrNull = (v) => v == null || typeof v === 'string';
 
-function checkBlocks(blocks, keepResult) {
+function checkBlocks(blocks, keepResult, defaultUnit = null) {
   if (!Array.isArray(blocks) || blocks.length === 0) return { error: 'blocks must be a non-empty array' };
   const out = [];
   for (const b of blocks) {
@@ -99,7 +99,7 @@ function checkBlocks(blocks, keepResult) {
       if (!(m.unit == null || UNITS.includes(m.unit))) return { error: `bad unit in ${m.name}` };
       if (!isStrOrNull(m.note)) return { error: `bad note in ${m.name}` };
       movements.push({ name: normalizeMovementName(m.name), sets: m.sets ?? null, reps: m.reps ?? null,
-        load: m.load ?? null, unit: m.unit ?? null, note: m.note ?? null });
+        load: m.load ?? null, unit: m.unit ?? (m.load != null ? defaultUnit : null), note: m.note ?? null });
     }
     out.push({ name: b.name, format: typeof b.format === 'string' ? b.format : '', movements,
       result: keepResult && typeof b.result === 'string' ? b.result : null });
@@ -109,11 +109,11 @@ function checkBlocks(blocks, keepResult) {
 
 const focusOf = (f) => (Array.isArray(f) ? f.filter((x) => typeof x === 'string') : []);
 
-export function validateSession(obj) {
+export function validateSession(obj, defaultUnit = null) {
   if (!obj || typeof obj !== 'object') return { ok: false, error: 'not an object' };
   if (typeof obj.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(obj.date)) return { ok: false, error: 'date must be YYYY-MM-DD' };
   if (!STYLES.includes(obj.style)) return { ok: false, error: 'bad style' };
-  const { blocks, error } = checkBlocks(obj.blocks, true);
+  const { blocks, error } = checkBlocks(obj.blocks, true, defaultUnit);
   if (error) return { ok: false, error };
   if (!isNumOrNull(obj.rpe)) return { ok: false, error: 'bad rpe' };
   return { ok: true, value: {
@@ -121,6 +121,18 @@ export function validateSession(obj) {
     title: typeof obj.title === 'string' ? obj.title : '', focus: focusOf(obj.focus), blocks,
     rpe: obj.rpe ?? null, notes: typeof obj.notes === 'string' ? obj.notes : null,
   } };
+}
+
+// Parse output is {"sessions": [...]}: a log can cover several days (e.g. a new athlete pasting past weeks).
+export function validateSessionList(obj, defaultUnit) {
+  if (!Array.isArray(obj?.sessions) || obj.sessions.length === 0) return { ok: false, error: 'sessions must be a non-empty array' };
+  const value = [];
+  for (const s of obj.sessions) {
+    const r = validateSession(s, defaultUnit);
+    if (!r.ok) return r;
+    value.push(r.value);
+  }
+  return { ok: true, value };
 }
 
 export function validateWorkout(obj) {
@@ -174,11 +186,12 @@ Rules:
 - Resolve relative dates such as "yesterday" against today; default to today when no date is given.
 - Expand abbreviations (e.g. FS = Front squat). One movement entry per distinct movement and load.
 - If no unit is written for a load, use ${unit}.
+- The text may cover one day or many. Output one entry per session (one per training day), oldest first.
 - Set "source" to "logged". Put anything else noteworthy (how it felt, scaling) in "notes" or the movement "note".
 - ${FIELD_NOTES}
 
 Output template:
-{"date": "YYYY-MM-DD", "source": "logged", "style": ${STYLE_ENUM}, "title": "short title", "focus": ["legs"], "blocks": ${BLOCKS_TEMPLATE}, "rpe": null, "notes": null}
+{"sessions": [{"date": "YYYY-MM-DD", "source": "logged", "style": ${STYLE_ENUM}, "title": "short title", "focus": ["legs"], "blocks": ${BLOCKS_TEMPLATE}, "rpe": null, "notes": null}]}
 Reply with ONLY the JSON object.`;
 }
 

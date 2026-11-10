@@ -66,6 +66,7 @@
 
   .banner { padding: 10px 14px; border-radius: var(--radius); background: var(--warn-soft); color: var(--fg); font-size: 14px; }
   .banner.error { background: var(--danger-soft); }
+  .banner.welcome { background: var(--accent-soft); }
   .msg { font-size: 14px; color: var(--muted); margin: 0; }
   .msg.error { color: var(--danger); }
   .msg.ok { color: var(--ok); }
@@ -120,7 +121,7 @@
   .move-dose { font: 500 14px/1.5 var(--font-data); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
   .move-note { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
 
-  .after { display: grid; gap: 12px; }
+  .after, #logPreview { display: grid; gap: 12px; }
 
   /* History */
   .profile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 4px 14px; }
@@ -202,6 +203,7 @@
   </section>
 
   <section class="panel" id="panel-log" role="tabpanel" aria-labelledby="tab-log" hidden>
+    <div class="banner welcome" id="welcome" data-i18n="welcome" hidden></div>
     <div class="field">
       <label for="logInput" data-i18n="logLabel">What did you do?</label>
       <textarea id="logInput" data-i18n-ph="logPh" style="min-height: 120px"></textarea>

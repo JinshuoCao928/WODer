@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeMovementName, convertLoad, buildMovementSummary, recentWindow, extractJson, validateSession, validateWorkout, buildParsePrompt, buildGeneratePrompt, buildRevisePrompt, STRICT_SUFFIX, WORKOUT_RULES } from '../src/core.js';
+import { normalizeMovementName, convertLoad, buildMovementSummary, recentWindow, extractJson, validateSession, validateSessionList, validateWorkout, buildParsePrompt, buildGeneratePrompt, buildRevisePrompt, STRICT_SUFFIX, WORKOUT_RULES } from '../src/core.js';
 
 test('name variants merge', () => {
   for (const n of ['Front Squats', 'front squat', '  FRONT   squat ', 'FS'])
@@ -111,4 +111,27 @@ test('parse prompt carries text, date and known names', () => {
   const p = buildParsePrompt({ text: 'FS 5x3 @100 yesterday', today: '2026-11-07', unit: 'kg', knownMovements: ['Front squat', 'Pendlay row'] });
   for (const s of ['FS 5x3 @100 yesterday', '2026-11-07', 'Front squat', 'Pendlay row', '"logged"', 'Reply with ONLY the JSON object.']) assert.ok(p.includes(s), s);
   assert.match(STRICT_SUFFIX, /ONLY the JSON object/);
+});
+
+test('validateSessionList accepts several days and fills a missing unit', () => {
+  const r = validateSessionList({ sessions: [
+    goodSession({ date: '2026-11-05', blocks: [{ name: 'S', movements: [{ name: 'FS', sets: 5, reps: 3, load: 100, unit: null }] }] }),
+    goodSession({ date: '2026-11-06' }),
+  ] }, 'kg');
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.value.map((s) => s.date), ['2026-11-05', '2026-11-06']);
+  assert.equal(r.value[0].blocks[0].movements[0].unit, 'kg');
+  assert.equal(r.value[1].blocks[0].movements[0].unit, null); // bodyweight stays unitless
+});
+
+test('validateSessionList rejects an empty or partly bad list', () => {
+  assert.equal(validateSessionList({ sessions: [] }, 'kg').ok, false);
+  assert.equal(validateSessionList({ sessions: [goodSession(), goodSession({ date: 'x' })] }, 'kg').ok, false);
+  assert.equal(validateSessionList(goodSession(), 'kg').ok, false);
+});
+
+test('parse prompt asks for a list of sessions', () => {
+  const p = buildParsePrompt({ text: 'Mon: FS 5x3. Tue: rows', today: '2026-11-07', unit: 'kg' });
+  assert.ok(p.includes('{"sessions": ['));
+  assert.match(p, /one entry per session/i);
 });

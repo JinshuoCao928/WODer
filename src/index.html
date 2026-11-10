@@ -121,7 +121,21 @@
   .move-dose { font: 500 14px/1.5 var(--font-data); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
   .move-note { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
 
-  .after, #logPreview { display: grid; gap: 12px; }
+  .after, #pendingList { display: grid; gap: 12px; }
+  .card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Log form */
+  .lf { display: grid; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; min-width: 0; }
+  .lf-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+  .lf-row > .field { flex: 1 1 120px; min-width: 0; }
+  .lf-row > .field.wide { flex: 3 1 220px; }
+  .lf-check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--fg); text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-weight: 500; }
+  .lf-check input { width: auto; }
+  .lf-move { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .lf-time { display: flex; gap: 6px; align-items: center; }
+  .lf-time select { flex: 1 1 0; min-width: 0; }
+  .lf input:disabled { opacity: 0.5; }
+  .history-group { font: 600 13px/1.2 var(--font-display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 16px 0 4px; }
 
   /* History */
   .profile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 4px 14px; }
@@ -208,15 +222,16 @@
       <label for="logInput" data-i18n="logLabel">What did you do?</label>
       <textarea id="logInput" data-i18n-ph="logPh" style="min-height: 120px"></textarea>
     </div>
-    <div class="row ai-only">
-      <button class="primary" id="previewBtn" data-i18n="preview">Read it</button>
+    <div class="row">
+      <button class="primary ai-only" id="previewBtn" data-i18n="preview">Read it</button>
+      <button class="secondary" id="addFormBtn" data-i18n="addWithForm">Add with form</button>
     </div>
+    <div id="logFormBox" hidden></div>
     <p class="msg error" id="logError" role="alert" hidden></p>
     <p class="msg ok" id="logOk" hidden></p>
-    <div id="logPreview" hidden></div>
+    <div id="pendingList"></div>
     <div class="row" id="logActions" hidden>
-      <button class="primary" id="logSaveBtn" data-i18n="save">Save</button>
-      <button class="secondary" id="logEditBtn" data-i18n="edit">Edit text</button>
+      <button class="primary" id="logSaveAllBtn" data-i18n="saveAll">Save all</button>
     </div>
   </section>
 

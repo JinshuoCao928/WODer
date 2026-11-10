@@ -56,6 +56,8 @@ const dose = (m) => {
   else if (m.reps != null) parts.push(String(m.reps));
   else if (m.sets != null) parts.push(`${m.sets} sets`);
   if (m.load != null) parts.push(`@ ${m.load}${m.unit ?? ''}`);
+  if (m.distance) parts.push(m.distance);
+  if (m.time) parts.push(m.time);
   return parts.join(' ');
 };
 
@@ -68,7 +70,8 @@ export function renderBlocks(blocks) {
     h('ul', { class: 'moves' }, b.movements.map((m) => h('li', {},
       h('span', { class: 'move-name' }, m.name),
       h('span', { class: 'move-dose' }, dose(m)),
-      m.note ? h('span', { class: 'move-note' }, m.note) : null)))));
+      m.note ? h('span', { class: 'move-note' }, m.note) : null))),
+    b.note ? h('p', { class: 'msg' }, b.note) : null));
 }
 
 export function renderWorkoutCard(w, { example = false } = {}) {

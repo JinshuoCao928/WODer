@@ -1,13 +1,14 @@
-// Log tab: free text (one day or many) -> Claude parses -> athlete checks the preview -> save.
+// Log tab: workouts come in by typing (Claude splits them) or by the form, wait as editable cards, then Save all.
 import { buildParsePrompt, buildMovementSummary, validateSessionList } from './core.js';
 import { askJson, errorKey } from './claude.js';
 import * as store from './store.js';
 import { t } from './i18n.js';
 import { MOVEMENTS } from './library.js';
+import { openForm } from './logform.js';
 import { state, h, show, hide, renderBlocks, reloadSessions, setAiAvailable, todayISO, isReadOnlyError, markReadOnly } from './app.js';
 
 const $ = (id) => document.getElementById(id);
-let parsed = null; // sessions still waiting to be saved
+let pending = []; // [{date, block}] waiting to be saved; an entry leaves only after its write succeeds
 
 // Library names first, then any of the athlete's own names the library doesn't have.
 export const knownMovements = () => [...new Set([...MOVEMENTS.map((m) => m.name),
@@ -25,31 +26,49 @@ export function showError(id, e, kind) {
   show(id, key === 'failed' ? t('failed') + (e?.message ?? e?.code ?? e) : t(key));
 }
 
-function clearPreview() {
-  parsed = null;
-  hide('logPreview'); hide('logActions');
-  $('logSaveBtn').textContent = t('save');
+const STYLE_FOR_LAYOUT = { strength: 'strength', pr: 'strength', amrap: 'wod', fortime: 'wod', intervals: 'wod', other: 'other' };
+export const styleForLayout = (type) => STYLE_FOR_LAYOUT[type] ?? 'other';
+export const titleForBlock = (b) => b.benchmark || (b.type === 'pr' && b.movements[0] ? `${b.movements[0].name} PR` : null)
+  || b.format || b.movements[0]?.name || '';
+
+export function entryCard({ date, block }, actions) {
+  return h('article', { class: 'card' },
+    h('div', { class: 'card-head' },
+      h('span', { class: 'tag' }, date ?? t('dateUnknown')),
+      h('h2', { class: 'card-title' }, titleForBlock(block))),
+    renderBlocks([block]),
+    h('div', { class: 'card-actions' }, actions));
+}
+
+function renderPending() {
+  const list = $('pendingList');
+  list.replaceChildren(...pending.map((entry, i) => {
+    const slot = h('div', {});
+    const edit = () => openForm(slot, { block: entry.block, date: entry.date, submitLabel: t('doneEditing'),
+      onSubmit: (next) => { pending[i] = next; renderPending(); }, onCancel: renderPending });
+    slot.append(entryCard(entry, [
+      h('button', { type: 'button', class: 'secondary', onclick: edit }, t('editCard')),
+      h('button', { type: 'button', class: 'secondary danger', onclick: () => { pending.splice(i, 1); renderPending(); } }, t('removeCard')),
+    ]));
+    return slot;
+  }));
+  $('logActions').hidden = pending.length === 0;
+  $('logSaveAllBtn').hidden = !(state.db && state.uid);
+  $('logSaveAllBtn').textContent = t('saveAll');
 }
 
 async function readIt() {
   const text = $('logInput').value.trim();
   if (!text || !state.sample) return;
   const btn = $('previewBtn');
-  hide('logError'); hide('logOk'); clearPreview();
+  hide('logError'); hide('logOk');
   btn.disabled = true; btn.textContent = t('reading');
   try {
     const sessions = await parseSessions(text);
     if ($('logInput').value.trim() !== text) return; // text was edited while Claude was reading it
-    parsed = sessions;
-    $('logPreview').replaceChildren(h('p', { class: 'msg' }, t('checkPreview')), ...sessions.map((s) => h('article', { class: 'card' },
-      h('div', { class: 'card-head' },
-        h('span', { class: 'tag' }, s.date),
-        h('h2', { class: 'card-title' }, s.title || s.blocks[0].movements[0]?.name || '')),
-      renderBlocks(s.blocks),
-      s.notes ? h('p', { class: 'msg' }, s.notes) : null)));
-    show('logPreview');
-    $('logActions').hidden = false;
-    $('logSaveBtn').hidden = !(state.db && state.uid);
+    for (const s of sessions) for (const block of s.blocks) pending.push({ date: s.date, block });
+    $('logInput').value = '';
+    renderPending();
   } catch (e) {
     showError('logError', e, 'log');
   } finally {
@@ -57,24 +76,33 @@ async function readIt() {
   }
 }
 
-async function save() {
-  if (!parsed || !state.db) return;
-  const btn = $('logSaveBtn');
+function openAddForm() {
+  const box = $('logFormBox');
+  box.hidden = false;
+  openForm(box, { submitLabel: t('addToList'),
+    onSubmit: (entry) => { pending.push(entry); box.hidden = true; box.replaceChildren(); renderPending(); },
+    onCancel: () => { box.hidden = true; box.replaceChildren(); } });
+}
+
+async function saveAll() {
+  if (!pending.length || !state.db) return;
+  const btn = $('logSaveAllBtn');
   btn.disabled = true; hide('logError');
-  const rawText = $('logInput').value.trim();
-  const total = parsed.length;
+  const total = pending.length;
   try {
-    while (parsed.length) { // shift only after a successful write, so Retry never saves a session twice
-      await store.saveSession(state.db, state.uid, { ...parsed[0], source: 'logged', rawText });
-      parsed.shift();
+    while (pending.length) {
+      const { date, block } = pending[0];
+      await store.saveSession(state.db, state.uid, { date, source: 'logged', style: styleForLayout(block.type),
+        title: titleForBlock(block), focus: [], blocks: [block], rpe: null, notes: null, rawText: '' });
+      pending.shift();
     }
-    $('logInput').value = '';
-    clearPreview();
+    renderPending();
     hide('welcome');
     show('logOk', total > 1 ? t('savedN', total) : t('saved'));
     await reloadSessions().catch(() => {});
   } catch (e) {
-    if (isReadOnlyError(e)) { clearPreview(); markReadOnly(); return; }
+    renderPending();
+    if (isReadOnlyError(e)) { markReadOnly(); return; }
     show('logError', t('saveFailed'));
     btn.textContent = t('retry');
   } finally {
@@ -84,7 +112,7 @@ async function save() {
 
 export function wireLog() {
   $('previewBtn').addEventListener('click', readIt);
-  $('logSaveBtn').addEventListener('click', save);
-  $('logEditBtn').addEventListener('click', () => { clearPreview(); $('logInput').focus(); });
-  $('logInput').addEventListener('input', () => { if (parsed) clearPreview(); hide('logOk'); });
+  $('addFormBtn').addEventListener('click', openAddForm);
+  $('logSaveAllBtn').addEventListener('click', saveAll);
+  $('logInput').addEventListener('input', () => hide('logOk'));
 }

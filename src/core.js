@@ -38,8 +38,15 @@ export function convertLoad(load, from, to) {
   return Math.round(raw * 2) / 2;
 }
 
-const byNewest = (a, b) =>
-  (a.date < b.date ? 1 : a.date > b.date ? -1 : (b.createdAt ?? 0) - (a.createdAt ?? 0));
+// Dated sessions newest first, then undated ones (newest createdAt first).
+export const byNewest = (a, b) => {
+  if (a.date !== b.date) {
+    if (a.date == null) return 1;
+    if (b.date == null) return -1;
+    return a.date < b.date ? 1 : -1;
+  }
+  return (b.createdAt ?? 0) - (a.createdAt ?? 0);
+};
 
 const movementsOf = (session) => (session.blocks ?? []).flatMap((b) => b.movements ?? []);
 
@@ -68,7 +75,7 @@ const shiftDate = (ymd, days) => {
 export function recentWindow(sessions, today, days = 14) {
   const from = shiftDate(today, -days);
   return sessions
-    .filter((s) => s.date >= from && s.date <= today)
+    .filter((s) => s.date != null && s.date >= from && s.date <= today)
     .sort(byNewest)
     .map((s) => ({
       date: s.date, style: s.style, focus: s.focus ?? [],
@@ -105,27 +112,61 @@ function checkBlocks(blocks, keepResult, defaultUnit = null) {
       if (!isNumOrNull(m.sets) || !isNumOrNull(m.load)) return { error: `bad numbers in ${m.name}` };
       if (!(m.reps == null || typeof m.reps === 'number' || typeof m.reps === 'string')) return { error: `bad reps in ${m.name}` };
       if (!(m.unit == null || UNITS.includes(m.unit))) return { error: `bad unit in ${m.name}` };
-      if (!isStrOrNull(m.note)) return { error: `bad note in ${m.name}` };
+      if (!isStrOrNull(m.note) || !isStrOrNull(m.distance)) return { error: `bad text in ${m.name}` };
+      if (!isTimeOrNull(m.time)) return { error: `bad time in ${m.name}` };
       movements.push({ name: normalizeMovementName(m.name), sets: m.sets ?? null, reps: m.reps ?? null,
-        load: m.load ?? null, unit: m.unit ?? (m.load != null ? defaultUnit : null), note: m.note ?? null });
+        load: m.load ?? null, unit: m.unit ?? (m.load != null ? defaultUnit : null),
+        distance: m.distance ?? null, time: m.time ?? null, note: m.note ?? null });
     }
-    out.push({ name: b.name, format: typeof b.format === 'string' ? b.format : '', movements,
-      result: keepResult && typeof b.result === 'string' ? b.result : null });
+    const type = b.type ?? 'other';
+    if (!LAYOUTS.includes(type)) return { error: `bad type ${type}` };
+    if (!(b.prKind == null || PR_KINDS.includes(b.prKind))) return { error: `bad prKind ${b.prKind}` };
+    if (type === 'pr' && movements.length !== 1) return { error: 'a PR has exactly one movement' };
+    for (const k of ['minutes', 'every', 'rounds', 'scoreRounds', 'scoreReps']) if (!isNumOrNull(b[k])) return { error: `bad ${k}` };
+    if (!isTimeOrNull(b.scoreTime)) return { error: 'bad scoreTime' };
+    if (!isStrOrNull(b.benchmark)) return { error: 'bad benchmark' };
+    const block = { name: b.name, type, format: typeof b.format === 'string' ? b.format : '',
+      benchmark: b.benchmark ?? null, minutes: b.minutes ?? null, every: b.every ?? null, rounds: b.rounds ?? null,
+      scoreRounds: b.scoreRounds ?? null, scoreReps: b.scoreReps ?? null, scoreTime: b.scoreTime ?? null,
+      prKind: type === 'pr' ? b.prKind ?? null : null, scaled: b.scaled === true, movements };
+    block.result = resultText(block) ?? (keepResult && typeof b.result === 'string' ? b.result : null);
+    out.push(block);
   }
   return { blocks: out };
+}
+
+export const LAYOUTS = ['strength', 'amrap', 'fortime', 'intervals', 'pr', 'other'];
+export const PR_KINDS = ['heaviest', 'fastest', 'mostReps', 'farthest'];
+const TIME_RE = /^\d{1,3}:\d{2}(:\d{2})?$/;
+const isTimeOrNull = (v) => v == null || (typeof v === 'string' && TIME_RE.test(v));
+
+// Display/prompt text for a block's score (spec §5). null when there is nothing to show.
+export function resultText(b) {
+  const m = b.movements?.[0] ?? {};
+  let text = null;
+  if (b.type === 'amrap' && b.scoreRounds != null) text = `${b.scoreRounds} rounds` + (b.scoreReps ? ` + ${b.scoreReps} reps` : '');
+  else if (b.type === 'fortime') text = b.scoreTime ?? (b.minutes != null ? `(cap ${b.minutes})` : null);
+  else if (b.type === 'intervals') text = b.scoreRounds != null ? `${b.scoreRounds} rounds` : b.scoreReps != null ? `${b.scoreReps} reps` : null;
+  else if (b.type === 'pr') {
+    if (b.prKind === 'heaviest' && m.load != null) text = `${m.reps ?? 1}RM ${m.load}${m.unit ?? ''}`;
+    else if (b.prKind === 'fastest' && m.time) text = `${m.distance ?? ''} in ${m.time}`.trim();
+    else if (b.prKind === 'mostReps' && m.reps != null) text = `${m.reps} reps`;
+    else if (b.prKind === 'farthest' && m.distance) text = m.distance + (b.minutes != null ? ` in ${b.minutes} min` : '');
+  }
+  return text && b.scaled ? `${text} (Scaled)` : text;
 }
 
 const focusOf = (f) => (Array.isArray(f) ? f.filter((x) => typeof x === 'string') : []);
 
 export function validateSession(obj, defaultUnit = null) {
   if (!obj || typeof obj !== 'object') return { ok: false, error: 'not an object' };
-  if (typeof obj.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(obj.date)) return { ok: false, error: 'date must be YYYY-MM-DD' };
+  if (obj.date != null && (typeof obj.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(obj.date))) return { ok: false, error: 'date must be YYYY-MM-DD or null' };
   if (!STYLES.includes(obj.style)) return { ok: false, error: 'bad style' };
   const { blocks, error } = checkBlocks(obj.blocks, true, defaultUnit);
   if (error) return { ok: false, error };
   if (!isNumOrNull(obj.rpe)) return { ok: false, error: 'bad rpe' };
   return { ok: true, value: {
-    date: obj.date, source: obj.source === 'generated' ? 'generated' : 'logged', style: obj.style,
+    date: obj.date ?? null, source: obj.source === 'generated' ? 'generated' : 'logged', style: obj.style,
     title: typeof obj.title === 'string' ? obj.title : '', focus: focusOf(obj.focus), blocks,
     rpe: obj.rpe ?? null, notes: typeof obj.notes === 'string' ? obj.notes : null,
   } };

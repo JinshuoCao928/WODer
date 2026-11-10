@@ -1,6 +1,8 @@
 // Private per-athlete storage. Everything lives under data/users/<uid>/, which only that viewer can read or write.
 // Paths: profile = data/users/<uid>/profile (doc); sessions = data/users/<uid>/profile/sessions/<sid>.
 
+import { byNewest } from './core.js';
+
 export const DB_TIMEOUT_MS = 10000;
 
 const profilePath = (uid) => `data/users/${uid}/profile`;
@@ -16,8 +18,9 @@ const withTimeout = (promise, ms) =>
 const plain = (obj) => JSON.parse(JSON.stringify(obj));
 
 export async function loadSessions(db, uid, { timeoutMs = DB_TIMEOUT_MS } = {}) {
-  const snap = await withTimeout(db.collection(sessionsPath(uid)).orderBy('date', 'desc').get(), timeoutMs);
-  return snap.docs.map((d) => ({ ...d.data(), id: d.id }));
+  // Sorted here, not by the store: undated sessions must not depend on how the store orders nulls.
+  const snap = await withTimeout(db.collection(sessionsPath(uid)).get(), timeoutMs);
+  return snap.docs.map((d) => ({ ...d.data(), id: d.id })).sort(byNewest);
 }
 
 export async function saveSession(db, uid, session) {

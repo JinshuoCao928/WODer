@@ -59,3 +59,11 @@ test('profile round trip and missing profile is null', async () => {
   await saveProfile(db, 'u1', { unit: 'lb', level: 'advanced', about: 'x' });
   assert.deepEqual(await loadProfile(db, 'u1'), { unit: 'lb', level: 'advanced', about: 'x' });
 });
+
+test('undated sessions come back last', async () => {
+  const db = fakeDb();
+  await saveSession(db, 'u1', { date: null, title: 'U' });
+  await saveSession(db, 'u1', { date: '2026-11-01', title: 'A' });
+  await saveSession(db, 'u1', { date: '2026-11-05', title: 'B' });
+  assert.deepEqual((await loadSessions(db, 'u1')).map((s) => s.title), ['B', 'A', 'U']);
+});

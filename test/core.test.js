@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeMovementName, convertLoad, buildMovementSummary, recentWindow, extractJson, validateSession, validateSessionList, validateWorkout, buildParsePrompt, buildGeneratePrompt, buildRevisePrompt, STRICT_SUFFIX, WORKOUT_RULES } from '../src/core.js';
+import { normalizeMovementName, convertLoad, buildMovementSummary, recentWindow, extractJson, validateSession, validateSessionList, validateWorkout, resultText, byNewest, buildParsePrompt, buildGeneratePrompt, buildRevisePrompt, STRICT_SUFFIX, WORKOUT_RULES } from '../src/core.js';
 
 test('name variants merge', () => {
   for (const n of ['Front Squats', 'front squat', '  FRONT   squat ', 'FS'])
@@ -142,4 +142,63 @@ test('names use the library spelling, else title case', () => {
   assert.equal(normalizeMovementName('wall ball shots'), 'Wall Ball Shot');
   assert.equal(normalizeMovementName('clean and jerk'), 'Clean and Jerk');
   assert.equal(normalizeMovementName('DUs'), 'Double-Under');
+});
+
+const blk = (over = {}) => ({ name: 'B', movements: [{ name: 'Thruster', reps: 21, load: 43, unit: 'kg' }], ...over });
+const sess = (over = {}) => ({ date: '2026-11-05', style: 'wod', blocks: [blk()], ...over });
+
+test('undated session validates', () => {
+  const r = validateSession(sess({ date: null }));
+  assert.equal(r.ok, true);
+  assert.equal(r.value.date, null);
+});
+
+test('v1 block keeps its result string and becomes type other', () => {
+  const r = validateSession(sess({ blocks: [{ name: 'Metcon', format: 'For Time', result: '8:12', movements: [{ name: 'Burpee', reps: 10 }] }] }));
+  assert.equal(r.ok, true);
+  assert.equal(r.value.blocks[0].type, 'other');
+  assert.equal(r.value.blocks[0].result, '8:12');
+  assert.equal(r.value.blocks[0].scaled, false);
+});
+
+test('resultText per layout', () => {
+  const pr = (prKind, m, over = {}) => resultText(blk({ type: 'pr', prKind, movements: [{ name: 'Back Squat', ...m }], ...over }));
+  assert.equal(resultText(blk({ type: 'amrap', scoreRounds: 7, scoreReps: 3 })), '7 rounds + 3 reps');
+  assert.equal(resultText(blk({ type: 'fortime', scoreTime: '4:32' })), '4:32');
+  assert.equal(resultText(blk({ type: 'fortime', minutes: 12, scoreTime: null })), '(cap 12)');
+  assert.equal(resultText(blk({ type: 'intervals', scoreRounds: 12 })), '12 rounds');
+  assert.equal(resultText(blk({ type: 'intervals', scoreReps: 85 })), '85 reps');
+  assert.equal(pr('heaviest', { reps: 3, load: 140, unit: 'kg' }), '3RM 140kg');
+  assert.equal(pr('fastest', { distance: '1000m', time: '3:35' }), '1000m in 3:35');
+  assert.equal(pr('mostReps', { reps: 25 }), '25 reps');
+  assert.equal(pr('farthest', { distance: '42 cal' }, { minutes: 1 }), '42 cal in 1 min');
+  assert.equal(resultText(blk({ type: 'fortime', scoreTime: '4:32', scaled: true })), '4:32 (Scaled)');
+  assert.equal(resultText(blk({ type: 'strength' })), null);
+});
+
+test('validateSession fills result from structured fields', () => {
+  const r = validateSession(sess({ blocks: [blk({ type: 'amrap', minutes: 20, scoreRounds: 7, scoreReps: 3, result: 'stale' })] }));
+  assert.equal(r.value.blocks[0].result, '7 rounds + 3 reps');
+  assert.equal(r.value.blocks[0].minutes, 20);
+});
+
+test('validateSession rejects bad new fields', () => {
+  assert.equal(validateSession(sess({ blocks: [blk({ type: 'fortime', scoreTime: '4.32' })] })).ok, false);
+  assert.equal(validateSession(sess({ blocks: [blk({ type: 'hiit' })] })).ok, false);
+  assert.equal(validateSession(sess({ blocks: [blk({ type: 'pr', prKind: 'best' })] })).ok, false);
+  assert.equal(validateSession(sess({ blocks: [blk({ type: 'pr', prKind: 'heaviest', movements: [{ name: 'A' }, { name: 'B' }] })] })).ok, false);
+  assert.equal(validateSession(sess({ blocks: [blk({ movements: [{ name: 'Row', time: 'fast' }] })] })).ok, false);
+  assert.equal(validateSession(sess({ blocks: [blk({ type: 'fortime', scoreTime: '1:05:30' })] })).ok, true);
+});
+
+test('undated sessions: skipped in recent window, sorted last, PR counts as best', () => {
+  const undatedPr = { date: null, createdAt: 9, blocks: [{ type: 'pr', prKind: 'heaviest', movements: [{ name: 'Back Squat', reps: 3, load: 140, unit: 'kg' }] }] };
+  const dated = { date: '2026-11-01', createdAt: 1, blocks: [{ movements: [{ name: 'Back Squat', sets: 5, reps: 5, load: 100, unit: 'kg' }] }] };
+  const later = { date: '2026-11-05', createdAt: 2, blocks: [] };
+  assert.deepEqual(recentWindow([undatedPr, dated], '2026-11-07').map((s) => s.date), ['2026-11-01']);
+  assert.deepEqual([undatedPr, dated, later].sort(byNewest).map((s) => s.date), ['2026-11-05', '2026-11-01', null]);
+  const s = buildMovementSummary([undatedPr, dated], 'kg')['Back Squat'];
+  assert.equal(s.latest.date, '2026-11-01');
+  assert.equal(s.best.load, 140);
+  assert.equal(s.best.date, null);
 });

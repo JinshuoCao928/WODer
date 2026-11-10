@@ -1,26 +1,34 @@
 // Pure logic for WODer: no DOM, no runtime capabilities. Tested with `npm test`.
+import { MOVEMENTS } from './library.js';
 
 export const MOVEMENT_ALIASES = {
-  'fs': 'Front squat',
-  'bs': 'Back squat',
-  'ohs': 'Overhead squat',
-  'dl': 'Deadlift',
-  'c&j': 'Clean and jerk',
-  't2b': 'Toes to bar',
-  'ttb': 'Toes to bar',
-  'hspu': 'Handstand push-up',
-  'du': 'Double under',
-  'pu': 'Pull-up',
+  'fs': 'Front Squat',
+  'bs': 'Back Squat',
+  'ohs': 'Overhead Squat',
+  'dl': 'Conventional Deadlift',
+  'c&j': 'Clean and Jerk',
+  't2b': 'Toes-to-Bar',
+  'ttb': 'Toes-to-Bar',
+  'hspu': 'Kipping Handstand Push-Up',
+  'du': 'Double-Under',
+  'pu': 'Pull-Up',
 };
 
 const LB_PER_KG = 2.20462;
+const LIBRARY_NAMES = new Map(MOVEMENTS.map((m) => [m.name.toLowerCase(), m.name]));
+const SMALL_WORDS = new Set(['and', 'to', 'of', 'the', 'with', 'in', 'on', 'over']);
 
+const titleCase = (s) => s.replace(/[^\s-]+/g, (w, i) => (i > 0 && SMALL_WORDS.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)));
+
+// Library spelling when the name is a library movement (or an alias), else Title Case.
 export function normalizeMovementName(name) {
-  let s = String(name ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
-  if (MOVEMENT_ALIASES[s]) return MOVEMENT_ALIASES[s];
-  s = s.replace(/([^s])s$/, '$1');
-  if (MOVEMENT_ALIASES[s]) return MOVEMENT_ALIASES[s];
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  const s = String(name ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+  const singular = s.replace(/([^s])s$/, '$1');
+  for (const k of [s, singular]) {
+    const hit = MOVEMENT_ALIASES[k] ?? LIBRARY_NAMES.get(k);
+    if (hit) return hit;
+  }
+  return titleCase(singular);
 }
 
 export function convertLoad(load, from, to) {

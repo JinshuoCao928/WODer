@@ -4,8 +4,8 @@ import { normalizeMovementName, convertLoad, buildMovementSummary, recentWindow,
 
 test('name variants merge', () => {
   for (const n of ['Front Squats', 'front squat', '  FRONT   squat ', 'FS'])
-    assert.equal(normalizeMovementName(n), 'Front squat');
-  assert.equal(normalizeMovementName('Pull-ups'), 'Pull-up');
+    assert.equal(normalizeMovementName(n), 'Front Squat');
+  assert.equal(normalizeMovementName('Pull-ups'), 'Pull-Up');
   assert.equal(normalizeMovementName('press'), 'Press'); // "ss" not singularized
 });
 
@@ -25,16 +25,16 @@ test('summary converts mixed units and picks best/latest', () => {
     S('2026-11-01', [{ name: 'Front squats', sets: 5, reps: 3, load: 100, unit: 'kg', note: null }]),
     S('2026-11-05', [{ name: 'FS', sets: 3, reps: 3, load: 225, unit: 'lb', note: null }]),
   ], 'kg');
-  assert.deepEqual(Object.keys(s), ['Front squat']);
-  assert.equal(s['Front squat'].latest.date, '2026-11-05');
-  assert.equal(s['Front squat'].latest.load, 102);
-  assert.deepEqual(s['Front squat'].best, { date: '2026-11-05', load: 102, unit: 'kg' });
+  assert.deepEqual(Object.keys(s), ['Front Squat']);
+  assert.equal(s['Front Squat'].latest.date, '2026-11-05');
+  assert.equal(s['Front Squat'].latest.load, 102);
+  assert.deepEqual(s['Front Squat'].best, { date: '2026-11-05', load: 102, unit: 'kg' });
 });
 
 test('summary skips null loads for best', () => {
   const s = buildMovementSummary([S('2026-11-01', [{ name: 'Pull-ups', sets: null, reps: 'max', load: null, unit: null, note: null }])], 'kg');
-  assert.equal(s['Pull-up'].best, null);
-  assert.equal(s['Pull-up'].latest.reps, 'max');
+  assert.equal(s['Pull-Up'].best, null);
+  assert.equal(s['Pull-Up'].latest.reps, 'max');
 });
 
 test('recentWindow boundaries', () => {
@@ -134,4 +134,12 @@ test('parse prompt asks for a list of sessions', () => {
   const p = buildParsePrompt({ text: 'Mon: FS 5x3. Tue: rows', today: '2026-11-07', unit: 'kg' });
   assert.ok(p.includes('{"sessions": ['));
   assert.match(p, /one entry per session/i);
+});
+
+test('names use the library spelling, else title case', () => {
+  assert.equal(normalizeMovementName('ghd sit-ups'), 'GHD Sit-Up');
+  assert.equal(normalizeMovementName('wall balls'), 'Wall Ball');
+  assert.equal(normalizeMovementName('wall ball shots'), 'Wall Ball Shot');
+  assert.equal(normalizeMovementName('clean and jerk'), 'Clean and Jerk');
+  assert.equal(normalizeMovementName('DUs'), 'Double-Under');
 });

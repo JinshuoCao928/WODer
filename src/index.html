@@ -221,22 +221,27 @@
     @keyframes rise { from { transform: translateY(4px); opacity: 0.6; } to { transform: none; opacity: 1; } }
   }
 
-  /* Cover */
+  /* Cover: the brand poster fills the first screen (it is also what the Artifacts gallery shows).
+     Always dark, whatever the theme, because the poster is. */
+  html, body { height: 100%; }
   .cover {
-    min-height: 100%; display: grid; place-items: center; position: relative; overflow: hidden;
-    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 40px;
+    height: 100%; min-height: 520px; display: grid; grid-template-rows: minmax(0, 1fr) auto; background: #0C0C0E; color: #F5F5F5;
   }
-  .cover-inner { position: relative; z-index: 1; width: 100%; max-width: 560px; display: grid; gap: 22px; justify-items: center; text-align: center; }
-  .cover img { width: 100%; max-width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--line); display: block; }
-  .tagline { margin: 0; font: italic 800 clamp(28px, 7vw, 44px)/1.02 var(--font-display); text-transform: uppercase; letter-spacing: 0.01em; text-wrap: balance; }
-  .tagline span { color: var(--accent); }
-  .cover button.primary { font-size: 18px; padding: 16px 26px; }
+  .cover img { width: 100%; height: 100%; min-height: 0; object-fit: contain; display: block; }
+  .cover-cta {
+    display: grid; gap: 14px; justify-items: center; text-align: center;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 12px 28px;
+  }
+  .tagline { margin: 0; font: italic 800 clamp(24px, 6vw, 40px)/1.02 var(--font-display); text-transform: uppercase; letter-spacing: 0.01em; text-wrap: balance; }
+  .tagline span { color: #FF5A1F; }
+  .cover button.primary { font-size: 18px; padding: 16px 26px; background: #FF5A1F; color: #101114; }
+  .cover button.primary:hover { background: #FF7140; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
 
 <section class="cover" id="cover" aria-label="WODCRAFT">
-  <div class="cover-inner">
-    <img src="assets/cover.jpg" alt="WODCRAFT, CrossFit workout designer: kettlebell, rings and a plyo box in a dark gym" width="1100" height="1204">
+  <img src="assets/cover.jpg" alt="WODCRAFT, CrossFit workout designer: kettlebell, rings and a plyo box in a dark gym" width="1100" height="1204">
+  <div class="cover-cta">
     <p class="tagline">Build your WOD. <span>Forge your limits.</span></p>
     <button type="button" class="primary" id="enterBtn" data-i18n="enterApp">Enter Workout Designer</button>
   </div>

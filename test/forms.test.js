@@ -98,8 +98,11 @@ test('v1 block opens with its result in Note and keeps it', () => {
 });
 
 test('C1: Mark done keeps every block when Claude splits a workout', () => {
-  const s = mergeParsed([{ date: '2026-11-09', style: 'wod', blocks: [{ name: 'Strength' }] }, { date: '2026-11-09', style: 'wod', blocks: [{ name: 'Metcon' }] }]);
+  const s = mergeParsed([{ date: '2026-11-09', style: 'wod', notes: null, rpe: null, blocks: [{ name: 'Strength' }] },
+    { date: '2026-11-09', style: 'wod', notes: 'metcon felt brutal', rpe: 9, blocks: [{ name: 'Metcon' }] }]);
   assert.deepEqual(s.blocks.map((b) => b.name), ['Strength', 'Metcon']);
+  assert.equal(s.notes, 'metcon felt brutal');
+  assert.equal(s.rpe, 9);
   assert.equal(s.date, '2026-11-09');
 });
 
@@ -114,7 +117,7 @@ test('I2: session notes and rpe reach the pending entries', () => {
   const entries = entriesFromSessions([{ date: null, rpe: 9, notes: 'felt awful', blocks: [{ name: 'Fran', note: 'scaled pull-ups' }, { name: 'B', note: null }] }]);
   assert.equal(entries.length, 2);
   assert.equal(entries[0].block.note, 'scaled pull-ups — felt awful');
-  assert.equal(entries[1].block.note, 'felt awful');
+  assert.equal(entries[1].block.note, null); // the day's note goes on the first piece only
   assert.equal(entries[0].rpe, 9);
   assert.equal(entries[0].date, null);
 });

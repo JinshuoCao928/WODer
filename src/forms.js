@@ -115,12 +115,14 @@ export function isScaledFromRx(block, benchmarkName, unit) {
 }
 
 // Mark done: Claude may split one generated workout into several entries; keep every block.
-export const mergeParsed = (sessions) => ({ ...sessions[0], blocks: sessions.flatMap((s) => s.blocks) });
+export const mergeParsed = (sessions) => ({ ...sessions[0], blocks: sessions.flatMap((s) => s.blocks),
+  notes: sessions.map((s) => s.notes).filter(Boolean).join(' — ') || null,
+  rpe: sessions.find((s) => s.rpe != null)?.rpe ?? null });
 
-// Log "Read it": one pending entry per block; the session's notes and RPE travel with each block.
-export const entriesFromSessions = (sessions) => sessions.flatMap((s) => s.blocks.map((b) => ({
+// Log "Read it": one pending entry per block; the day's note goes on its first block only, RPE on each.
+export const entriesFromSessions = (sessions) => sessions.flatMap((s) => s.blocks.map((b, i) => ({
   date: s.date ?? null, rpe: s.rpe ?? null,
-  block: { ...b, note: [b.note, s.notes].filter(Boolean).join(' — ') || null },
+  block: { ...b, note: [b.note, i === 0 ? s.notes : null].filter(Boolean).join(' — ') || null },
 })));
 
 export function weightOptions(unit, extra = []) {

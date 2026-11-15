@@ -13,7 +13,7 @@ const STRINGS = {
     avoidLabel: 'Avoid / limitations', avoidPh: 'e.g. no running, left shoulder is cranky',
     extraLabel: 'Anything else?', extraPh: 'e.g. training outdoors, want a short finisher',
     emptyToday: 'Your workout will appear here. Fill in what you like above and tap Design my workout.',
-    enterApp: 'Enter Workout Designer',
+    enterApp: 'Enter Workout Designer', darkMode: 'Dark mode',
     weightUnit: 'Weight unit', distanceUnit: 'Distance unit',
     generate: 'Design my workout', generating: 'Designing…',
     changeLabel: 'Change something', changePh: 'e.g. swap pull-ups, my grip is shot', revise: 'Update workout',

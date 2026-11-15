@@ -294,7 +294,25 @@ function wireCover() {
   $('logoBtn').addEventListener('click', () => showApp(false));
 }
 
+// Light / dark switch: follows the system until the athlete flips it; the choice is saved on this device.
+function wireTheme() {
+  let saved = null;
+  try { saved = localStorage.getItem('wodcraft.theme'); } catch { /* storage unavailable */ }
+  const systemDark = () => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+  const apply = (theme) => {
+    if (theme) document.documentElement.dataset.theme = theme;
+    $('themeSwitch').setAttribute('aria-checked', String((theme ?? (systemDark() ? 'dark' : 'light')) === 'dark'));
+  };
+  apply(saved);
+  $('themeSwitch').addEventListener('click', () => {
+    const next = $('themeSwitch').getAttribute('aria-checked') === 'true' ? 'light' : 'dark';
+    try { localStorage.setItem('wodcraft.theme', next); } catch { /* storage unavailable */ }
+    apply(next);
+  });
+}
+
 async function start() {
+  wireTheme();
   wireCover();
   applyStrings();
   wireTabs();

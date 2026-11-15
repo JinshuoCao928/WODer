@@ -5,32 +5,54 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
-  /* WODCRAFT · Industrial Strength. One deliberate dark theme; orange marks actions and selection only.
-     Layout: branded cover first, then one 640px training-log column with a sticky tab bar. */
+  /* WODCRAFT · Industrial Strength. Light = warm concrete, dark = charcoal steel plate; orange marks actions and selection only.
+     Layout: branded cover first, then one 640px training-log column with a sticky tab bar.
+     Theme: follows the system until the header switch sets data-theme (saved on this device). */
   :root {
-    --bg: #101114;          /* primary background */
-    --surface: #1C1E22;     /* cards, inputs */
-    --surface-2: #26282D;   /* secondary buttons, hover */
-    --fg: #F5F5F5;
-    --muted: #A1A1AA;
-    --line: #34363B;
-    --accent: #FF5A1F;      /* industrial orange */
-    --accent-hover: #FF7140;
-    --accent-fg: #101114;   /* dark text on orange: 6:1 contrast */
-    --accent-soft: #2B1A12;
-    --ok: #4ADE80;
-    --warn: #F5B740;
-    --danger: #FF6B6B;
-    --warn-soft: #2A2414;
-    --danger-soft: #2E1719;
+    --bg: #EDEBE8;          /* warm concrete */
+    --surface: #FFFFFF;
+    --surface-2: #F4F2EF;
+    --fg: #17181B;
+    --muted: #5E5E66;
+    --line: #D6D3CE;
+    --accent: #E2480F;      /* industrial orange, deepened for contrast on light */
+    --accent-hover: #F2581E;
+    --accent-fg: #101114;
+    --accent-soft: #FCE6DC;
+    --ok: #1F8A4C;
+    --warn: #8A6100;
+    --danger: #C0322A;
+    --warn-soft: #FBF1D6;
+    --danger-soft: #FBE3E1;
+    --texture: radial-gradient(rgb(0 0 0 / 0.035) 1px, transparent 1.5px); /* concrete speckle */
+    --texture-size: 6px 6px;
     --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
     --font-body: "Barlow", "Helvetica Neue", Arial, sans-serif;
     --font-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
     --radius: 8px;
-    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101114; --surface: #1C1E22; --surface-2: #26282D; --fg: #F5F5F5; --muted: #A1A1AA; --line: #34363B;
+      --accent: #FF5A1F; --accent-hover: #FF7140; --accent-fg: #101114; --accent-soft: #2B1A12;
+      --ok: #4ADE80; --warn: #F5B740; --danger: #FF6B6B; --warn-soft: #2A2414; --danger-soft: #2E1719;
+      --texture: repeating-linear-gradient(45deg, rgb(255 255 255 / 0.022) 0 2px, transparent 2px 16px),
+        repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.016) 0 2px, transparent 2px 16px); /* steel plate */
+      --texture-size: auto;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+      --bg: #101114; --surface: #1C1E22; --surface-2: #26282D; --fg: #F5F5F5; --muted: #A1A1AA; --line: #34363B;
+      --accent: #FF5A1F; --accent-hover: #FF7140; --accent-fg: #101114; --accent-soft: #2B1A12;
+      --ok: #4ADE80; --warn: #F5B740; --danger: #FF6B6B; --warn-soft: #2A2414; --danger-soft: #2E1719;
+      --texture: repeating-linear-gradient(45deg, rgb(255 255 255 / 0.022) 0 2px, transparent 2px 16px),
+        repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.016) 0 2px, transparent 2px 16px); /* steel plate */
+      --texture-size: auto;
+      color-scheme: dark;
   }
 
-  body { background: var(--bg); color: var(--fg); font: 400 16px/1.5 var(--font-body); }
+  body { background: var(--bg); background-image: var(--texture); background-size: var(--texture-size); background-attachment: fixed; color: var(--fg); font: 400 16px/1.5 var(--font-body); }
   body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
   .wrap {
     max-width: 640px; margin: 0 auto;
@@ -47,6 +69,13 @@
     background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 999px;
   }
   .seg { display: flex; }
+  /* Light / dark slide switch */
+  .theme-switch { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 0; cursor: pointer; color: var(--muted); font: 600 13px/1 var(--font-display); letter-spacing: 0.04em; }
+  .theme-switch .track { position: relative; width: 44px; height: 24px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); transition: background-color 150ms; }
+  .theme-switch .thumb { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--muted); transition: transform 150ms, background-color 150ms; }
+  .theme-switch[aria-checked="true"] .track { background: var(--accent); border-color: var(--accent); }
+  .theme-switch[aria-checked="true"] .thumb { transform: translateX(20px); background: var(--accent-fg); }
+  @media (prefers-reduced-motion: reduce) { .theme-switch .track, .theme-switch .thumb { transition: none; } }
   .seg button { border-radius: 0; }
   .seg button:first-child { border-radius: 999px 0 0 999px; }
   .seg button:last-child { border-radius: 0 999px 999px 0; border-left: 0; }
@@ -202,6 +231,7 @@
   .tagline { margin: 0; font: italic 800 clamp(28px, 7vw, 44px)/1.02 var(--font-display); text-transform: uppercase; letter-spacing: 0.01em; text-wrap: balance; }
   .tagline span { color: var(--accent); }
   .cover button.primary { font-size: 18px; padding: 16px 26px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
 
 <section class="cover" id="cover" aria-label="WODCRAFT">
@@ -222,6 +252,10 @@
       <span class="today-date" id="todayDate"></span>
     </div>
     <div class="toggles">
+      <button type="button" class="theme-switch" id="themeSwitch" role="switch" aria-checked="false">
+        <span aria-hidden="true">☀</span><span class="track"><span class="thumb"></span></span><span aria-hidden="true">☾</span>
+        <span class="sr-only" data-i18n="darkMode">Dark mode</span>
+      </button>
       <div class="seg" role="group" id="unitSeg" data-i18n-aria="weightUnit">
         <button type="button" data-unit="kg" aria-pressed="true">kg</button><button type="button" data-unit="lb" aria-pressed="false">lb</button>
       </div>

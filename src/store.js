@@ -23,6 +23,12 @@ export async function loadSessions(db, uid, { timeoutMs = DB_TIMEOUT_MS } = {}) 
   return snap.docs.map((d) => ({ ...d.data(), id: d.id })).sort(byNewest);
 }
 
+// Shared CrossFit.com list (owner-written, readable by every viewer); doc id YYMMDD.
+export async function loadCrossfit(db, { timeoutMs = DB_TIMEOUT_MS } = {}) {
+  const snap = await withTimeout(db.collection('crossfit').get(), timeoutMs);
+  return snap.docs.map((d) => d.data()).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 8);
+}
+
 export async function saveSession(db, uid, session) {
   const id = crypto.randomUUID();
   const { id: _ignored, ...body } = session;

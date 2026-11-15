@@ -10,7 +10,7 @@ const $ = (id) => document.getElementById(id);
 export const state = {
   db: null, user: null, sample: null, uid: null,
   sessions: [], profile: { unit: 'kg', distance: 'metric', level: 'intermediate', about: '' },
-  historyOk: false, workout: null,
+  historyOk: false, workout: null, crossfit: null,
 };
 
 // ---------- small DOM helper (textContent only; never innerHTML with data) ----------
@@ -22,7 +22,7 @@ export function h(tag, attrs = {}, ...children) {
     else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
     else el.setAttribute(k, v === true ? '' : v);
   }
-  for (const c of children.flat()) if (c != null && c !== false) el.append(c instanceof Node ? c : String(c));
+  for (const c of children.flat(Infinity)) if (c != null && c !== false) el.append(c instanceof Node ? c : String(c));
   return el;
 }
 
@@ -33,7 +33,7 @@ export const historyContext = () => {
   const sessions = state.historyOk ? state.sessions : [];
   const records = sessions.flatMap((s) => (s.blocks ?? []).filter((b) => b.type === 'pr' && b.movements?.[0])
     .map((b) => `${b.movements[0].name} ${resultText(b) ?? ''}`.trim() + (s.date ? ` (${s.date})` : '')));
-  return { today, lang: getLang(), distance: state.profile.distance, profile: state.profile, records, recent: recentWindow(sessions, today), summary: buildMovementSummary(sessions, state.profile.unit) };
+  return { today, crossfit: state.crossfit, lang: getLang(), distance: state.profile.distance, profile: state.profile, records, recent: recentWindow(sessions, today), summary: buildMovementSummary(sessions, state.profile.unit) };
 };
 
 export function show(el, text) {
@@ -75,18 +75,63 @@ export function renderBlocks(blocks) {
     b.note ? h('p', { class: 'msg' }, b.note) : null));
 }
 
+const LEVEL_VERSION = { beginner: 'beginner', intermediate: 'intermediate', advanced: 'rx' };
+const lines = (ls) => h('div', { class: 'cf-lines' }, ls.map((l) => h('div', {}, l)));
+const versionBox = (k, ls, mine = false) => h('div', { class: mine ? 'version mine' : 'version' },
+  h('h4', {}, `- ${t(k + 'Label')} -${mine ? ' ' + t('yourLevel') : ''}`),
+  ls?.length ? lines(ls) : h('p', { class: 'msg' }, t('sameAsRx')));
+
+// A main block in the gym-app format: RX / INTERMEDIATE / BEGINNER, Intended Stimulus, then the athlete's own loads.
+function mainBlock(b) {
+  const mine = LEVEL_VERSION[state.profile.level] ?? 'intermediate';
+  return h('section', { class: 'block main-block' },
+    h('div', { class: 'block-head' }, h('span', { class: 'block-name' }, b.name), b.format ? h('span', { class: 'block-format' }, b.format) : null),
+    ['rx', 'intermediate', 'beginner'].map((k) => versionBox(k, b.versions[k], k === mine)),
+    b.stimulus?.length ? h('div', { class: 'stimulus' }, h('h4', {}, t('stimulus')), h('ul', {}, b.stimulus.map((x) => h('li', {}, x)))) : null,
+    renderBlocks([{ ...b, name: t('yourLoads'), format: '' }]));
+}
+
 export function renderWorkoutCard(w) {
   return h('article', { class: 'card' },
     h('div', { class: 'card-head' },
       h('span', { class: 'tag' }, styleLabel(w.style)),
-      h('h2', { class: 'card-title' }, w.title),
-      w.rationale ? h('p', { class: 'rationale' }, w.rationale) : null),
-    renderBlocks(w.blocks));
+      h('h2', { class: 'card-title' }, w.title)),
+    w.blocks.map((b) => (b.versions ? mainBlock(b) : renderBlocks([b]))),
+    w.rationale ? h('div', { class: 'block' }, h('span', { class: 'block-name' }, t('whyThis')), h('p', { class: 'rationale' }, w.rationale)) : null);
+}
+
+// ---------- CrossFit.com card ----------
+function cfDay(d) {
+  const head = h('div', { class: 'cf-head' }, d.date + (d.name ? ' · ' + d.name : '') + (d.rest ? ' · ' + t('cfRest') : ''));
+  if (d.rest) return h('div', { class: 'cf-day' }, head);
+  return h('div', { class: 'cf-day' }, head,
+    versionBox('rx', d.rx), versionBox('intermediate', d.intermediate), versionBox('beginner', d.beginner),
+    d.stimulus ? h('p', { class: 'msg' }, d.stimulus) : null,
+    d.url ? h('a', { href: d.url, target: '_blank', rel: 'noopener' }, t('openOnSite')) : null);
+}
+
+function renderCrossfit() {
+  const cf = state.crossfit;
+  if (!cf) return $('cfBox').replaceChildren(); // signed out: the shared list can't be read
+  const note = !cf.newest ? t('cfNone') : cf.newest < todayISO() ? t('cfStale', cf.newest) : null;
+  $('cfBox').replaceChildren(h('article', { class: 'card cf' },
+    h('span', { class: 'tag' }, t('cfToday')),
+    cf.today ? cfDay(cf.today) : null,
+    note ? h('p', { class: 'msg' }, note) : null,
+    cf.past.length ? h('details', {}, h('summary', {}, t('cfPast')), cf.past.map(cfDay)) : null));
+}
+
+export async function loadCrossfitState() {
+  const list = await store.loadCrossfit(state.db);
+  const today = todayISO();
+  state.crossfit = { today: list.find((d) => d.date === today) ?? null, past: list.filter((d) => d.date < today).slice(0, 7), newest: list[0]?.date ?? null };
+  renderCrossfit();
 }
 
 const styleLabel = (s) => t('style' + s.charAt(0).toUpperCase() + s.slice(1));
 
 export function renderToday() {
+  renderCrossfit();
   const card = $('card');
   card.replaceChildren(state.workout ? renderWorkoutCard(state.workout) : h('div', { class: 'empty' }, t('emptyToday')));
   $('after').hidden = !state.workout;
@@ -274,6 +319,7 @@ async function start() {
     if (profile) state.profile = { ...state.profile, ...profile };
     renderProfile();
     renderUnits();
+    await loadCrossfitState().catch(() => {}); // the CrossFit list is extra context; history still loads without it
     await reloadSessions();
     if (state.sessions.length === 0) { selectTab('log'); show('welcome'); }
   } catch {

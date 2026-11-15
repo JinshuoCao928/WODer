@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadSessions, saveSession, updateSession, deleteSession, loadProfile, saveProfile, sessionsPath } from '../src/store.js';
+import { loadSessions, loadCrossfit, saveSession, updateSession, deleteSession, loadProfile, saveProfile, sessionsPath } from '../src/store.js';
 
 // Minimal in-memory stand-in for the artifact db: only what store.js uses.
 function fakeDb({ hang = false } = {}) {
@@ -78,4 +78,11 @@ test('updateSession keeps id and createdAt, sets updatedAt', async () => {
   assert.equal(doc.createdAt, 5);
   assert.equal(typeof doc.updatedAt, 'number');
   assert.equal('id' in doc, false);
+});
+
+test('loadCrossfit returns the 8 newest days, newest first', async () => {
+  const db = fakeDb();
+  for (let d = 1; d <= 10; d++) await db.collection('crossfit').doc(`2611${String(d).padStart(2, '0')}`).set({ date: `2026-11-${String(d).padStart(2, '0')}`, rx: [] });
+  const list = await loadCrossfit(db);
+  assert.deepEqual(list.map((x) => x.date), ['2026-11-10', '2026-11-09', '2026-11-08', '2026-11-07', '2026-11-06', '2026-11-05', '2026-11-04', '2026-11-03']);
 });

@@ -44,6 +44,11 @@ const STRINGS = {
     sets: 'Sets', reps: 'Reps', weight: 'Weight', addMovement: '+ Add movement', removeMovement: 'Remove',
     note: 'Note', addToList: 'Add to list', doneEditing: 'Done', saveChanges: 'Save changes', saveAll: 'Save all',
     removeCard: 'Remove', editCard: 'Edit', needMovement: 'Add a movement.', dateUnknown: 'Date unknown',
+    cfToday: 'CrossFit.com today', cfPast: 'Past 7 days', cfRest: 'Rest day', openOnSite: 'Open on crossfit.com',
+    cfNone: 'No CrossFit.com workouts loaded yet. Ask Claude to update them.',
+    cfStale: (d) => `CrossFit.com workouts last updated ${d}. Ask Claude to update them.`,
+    sameAsRx: "Same as Rx'd", rxLabel: 'RX', intermediateLabel: 'INTERMEDIATE', beginnerLabel: 'BEGINNER', yourLevel: '(your level)',
+    stimulus: 'Intended Stimulus', yourLoads: 'Your loads', whyThis: 'Why this workout',
     lastSessions: (n) => `${n} session${n === 1 ? '' : 's'} logged`,
   },
   zh: {
@@ -89,6 +94,11 @@ const STRINGS = {
     sets: '组数', reps: '次数', weight: '重量', addMovement: '+ 添加动作', removeMovement: '删除',
     note: '备注', addToList: '加入列表', doneEditing: '完成', saveChanges: '保存修改', saveAll: '全部保存',
     removeCard: '移除', editCard: '修改', needMovement: '请添加一个动作。', dateUnknown: '日期不详',
+    cfToday: 'CrossFit.com 今日训练', cfPast: '过去 7 天', cfRest: '休息日', openOnSite: '在 crossfit.com 查看',
+    cfNone: '还没有加载 CrossFit.com 的训练。请让 Claude 更新。',
+    cfStale: (d) => `CrossFit.com 训练最后更新于 ${d}。请让 Claude 更新。`,
+    sameAsRx: '与 RX 相同', rxLabel: 'RX', intermediateLabel: '中级', beginnerLabel: '初级', yourLevel: '（你的水平）',
+    stimulus: '训练目标', yourLoads: '你的重量', whyThis: '为什么推荐这个训练',
     lastSessions: (n) => `已记录 ${n} 次训练`,
   },
 };

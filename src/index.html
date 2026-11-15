@@ -135,6 +135,19 @@
   .after, #pendingList { display: grid; gap: 12px; }
   .card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
+  /* CrossFit-style blocks (gym-app format) */
+  .version { display: grid; gap: 4px; }
+  .version h4, .stimulus h4 { margin: 4px 0 0; font: 700 15px/1.2 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; }
+  .version.mine h4 { color: var(--accent); }
+  .cf-lines { display: grid; gap: 2px; overflow-wrap: anywhere; }
+  .stimulus ul { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+  .stimulus li::before { content: "✓ "; color: var(--ok); font-weight: 700; }
+  .main-block { gap: 10px; }
+  .cf-day { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .cf-head { font: 700 17px/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; }
+  .cf details > summary { cursor: pointer; padding: 8px 0; font: 600 14px/1 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .cf a { color: var(--accent); font-size: 14px; }
+
   /* Log form */
   .lf { display: grid; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; min-width: 0; }
   .lf-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
@@ -198,6 +211,7 @@
   <div id="banner" class="banner" hidden></div>
 
   <section class="panel" id="panel-today" role="tabpanel" aria-labelledby="tab-today">
+    <div id="cfBox"></div>
     <div class="ai-only field">
       <label for="feel" data-i18n="feelLabel">How do you feel today?</label>
       <input id="feel" data-i18n-ph="feelPh">

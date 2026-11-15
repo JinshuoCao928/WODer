@@ -126,15 +126,17 @@ function checkBlocks(blocks, keepResult, defaultUnit = null) {
     for (const k of ['minutes', 'every', 'rounds', 'scoreRounds', 'scoreReps']) if (!isNumOrNull(b[k])) return { error: `bad ${k}` };
     if (!isTimeOrNull(b.scoreTime)) return { error: 'bad scoreTime' };
     if (!isStrOrNull(b.benchmark)) return { error: 'bad benchmark' };
-    const isLines = (v) => Array.isArray(v) && v.every((x) => typeof x === 'string');
-    if (b.versions != null && !['rx', 'intermediate', 'beginner'].every((k) => isLines(b.versions[k]))) return { error: 'bad versions' };
-    if (b.stimulus != null && !isLines(b.stimulus)) return { error: 'bad stimulus' };
+    // versions/stimulus are display-only: normalize instead of rejecting the whole workout.
+    const asLines = (v) => (Array.isArray(v) && v.every((x) => typeof x === 'string') ? v : null);
+    const rx = asLines(b.versions?.rx);
+    const versions = rx?.length ? { rx, intermediate: asLines(b.versions.intermediate), beginner: asLines(b.versions.beginner) } : null;
+    const stimulus = typeof b.stimulus === 'string' ? (b.stimulus.trim() ? [b.stimulus] : null) : asLines(b.stimulus);
     const block = { name: b.name, type, format: typeof b.format === 'string' ? b.format : '',
       benchmark: b.benchmark ?? null, minutes: b.minutes ?? null, every: b.every ?? null, rounds: b.rounds ?? null,
       scoreRounds: b.scoreRounds ?? null, scoreReps: b.scoreReps ?? null, scoreTime: b.scoreTime ?? null,
       prKind: type === 'pr' ? b.prKind ?? null : null, scaled: b.scaled === true,
       note: typeof b.note === 'string' && b.note.trim() ? b.note : null,
-      versions: b.versions ?? null, stimulus: b.stimulus ?? null, movements };
+      versions, stimulus, movements };
     block.result = resultText(block) ?? (keepResult && typeof b.result === 'string' ? b.result : null);
     out.push(block);
   }
@@ -225,6 +227,19 @@ export const WORKOUT_RULES = [
   "A main block's \"movements\" are the athlete's own version: the option for their level (beginner -> beginner, intermediate -> intermediate, advanced -> rx), with loads from their history.",
   "The rationale is 3-4 sentences: how it relates to today's CrossFit.com workout, what the athlete and CrossFit.com trained this week, and the athlete's stated feeling, focus and limits.",
 ];
+
+// Mark done: the log parser gets only the athlete's own movements, not the RX/Intermediate/Beginner text.
+export const workoutForLog = (w) => ({ ...w, blocks: w.blocks.map(({ versions, stimulus, ...b }) => b) });
+
+// Links from the CrossFit list are rendered as <a href>; only crossfit.com https links are allowed.
+export const safeUrl = (u) => (/^https:\/\/(www\.)?crossfit\.com\//.test(u ?? '') ? u : null);
+
+// Today's doc, the 7 days before it, and the newest doc that isn't in the future (tomorrow's WOD can be posted early).
+export function pickCrossfit(list, today) {
+  const upToToday = list.filter((d) => d.date <= today).sort((a, b) => (a.date < b.date ? 1 : -1));
+  return { today: upToToday.find((d) => d.date === today) ?? null, past: upToToday.filter((d) => d.date < today).slice(0, 7),
+    newest: upToToday[0]?.date ?? null };
+}
 
 const cfLines = (lines) => (lines?.length ? lines.join(' / ') : "Same as Rx'd");
 // One compact line per CrossFit.com day (past 7 days section).

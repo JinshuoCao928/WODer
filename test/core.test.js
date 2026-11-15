@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeMovementName, convertLoad, buildMovementSummary, recentWindow, extractJson, validateSession, validateSessionList, validateWorkout, resultText, byNewest, buildParsePrompt, buildGeneratePrompt, buildRevisePrompt, STRICT_SUFFIX, WORKOUT_RULES, describePrefs, crossfitText } from '../src/core.js';
+import { normalizeMovementName, convertLoad, buildMovementSummary, recentWindow, extractJson, validateSession, validateSessionList, validateWorkout, resultText, byNewest, buildParsePrompt, buildGeneratePrompt, buildRevisePrompt, STRICT_SUFFIX, WORKOUT_RULES, describePrefs, crossfitText, workoutForLog, pickCrossfit, safeUrl } from '../src/core.js';
 
 test('name variants merge', () => {
   for (const n of ['Front Squats', 'front squat', '  FRONT   squat ', 'FS'])
@@ -247,7 +247,9 @@ test('validateWorkout keeps CrossFit-style versions and stimulus', () => {
   const plain = validateWorkout({ ...w, blocks: [{ name: 'Main', movements: main.movements }] });
   assert.equal(plain.value.blocks[0].versions, null);
   assert.equal(plain.value.blocks[0].stimulus, null);
-  assert.equal(validateWorkout({ ...w, blocks: [{ ...main, versions: { rx: 'x' } }] }).ok, false);
+  const bad = validateWorkout({ ...w, blocks: [{ ...main, versions: { rx: 'x' } }] });
+  assert.equal(bad.ok, true); // display-only: dropped, not fatal
+  assert.equal(bad.value.blocks[0].versions, null);
 });
 
 const CF_TODAY = { date: '2026-11-18', name: null, rest: false,
@@ -273,4 +275,43 @@ test('prompts start from today\'s CrossFit.com workout and ask for the CrossFit 
   const none = buildGeneratePrompt({ prefs: {}, ...ctx, crossfit: { today: null, past: [] } });
   assert.ok(none.includes('No CrossFit.com workout today.'));
   assert.ok(buildRevisePrompt({ workout: {}, change: 'x', ...ctx, crossfit: { today: CF_TODAY, past: [] } }).includes('CrossFit.com today:'));
+});
+
+test('I1: display-only fields are lenient', () => {
+  const base = { title: 'T', rationale: 'R', style: 'wod', focus: [] };
+  const mv = [{ name: 'Thruster', reps: 21 }];
+  const nullBeginner = validateWorkout({ ...base, blocks: [{ name: 'Main', movements: mv, versions: { rx: ['For time:'], intermediate: ['x'], beginner: null }, stimulus: '8-12 min, unbroken' }] });
+  assert.equal(nullBeginner.ok, true);
+  assert.deepEqual(nullBeginner.value.blocks[0].versions, { rx: ['For time:'], intermediate: ['x'], beginner: null });
+  assert.deepEqual(nullBeginner.value.blocks[0].stimulus, ['8-12 min, unbroken']);
+  const noRx = validateWorkout({ ...base, blocks: [{ name: 'Main', movements: mv, versions: { intermediate: ['x'] } }] });
+  assert.equal(noRx.ok, true);
+  assert.equal(noRx.value.blocks[0].versions, null);
+});
+
+test('I2: Mark done sends the parser only the athlete\'s own version', () => {
+  const w = { title: 'T', blocks: [{ name: 'Main', versions: { rx: ['21 thrusters (65/95 lb)'] }, stimulus: ['fast'], movements: [{ name: 'Thruster', load: 30, unit: 'kg' }] }] };
+  const s = JSON.stringify(workoutForLog(w));
+  assert.ok(!s.includes('65/95'));
+  assert.ok(!s.includes('stimulus'));
+  assert.ok(s.includes('"load":30'));
+});
+
+test('M3: only crossfit.com https links are kept', () => {
+  assert.equal(safeUrl('https://www.crossfit.com/261115'), 'https://www.crossfit.com/261115');
+  assert.equal(safeUrl('javascript:alert(1)'), null);
+  assert.equal(safeUrl('https://evil.example/x'), null);
+  assert.equal(safeUrl(undefined), null);
+});
+
+test('M5: tomorrow\'s WOD posted early does not empty today or eat a past slot', () => {
+  const day = (d) => ({ date: `2026-11-${d}`, rx: [] });
+  const list = ['16', '15', '14', '13', '12', '11', '10', '09', '08', '07'].map(day); // 16 is tomorrow
+  const cf = pickCrossfit(list, '2026-11-15');
+  assert.equal(cf.today.date, '2026-11-15');
+  assert.deepEqual(cf.past.map((d) => d.date), ['2026-11-14', '2026-11-13', '2026-11-12', '2026-11-11', '2026-11-10', '2026-11-09', '2026-11-08']);
+  assert.equal(cf.newest, '2026-11-15');
+  const noToday = pickCrossfit([day('16'), day('14')], '2026-11-15');
+  assert.equal(noToday.today, null);
+  assert.equal(noToday.newest, '2026-11-14'); // stale note still shows
 });

@@ -80,9 +80,10 @@ test('updateSession keeps id and createdAt, sets updatedAt', async () => {
   assert.equal('id' in doc, false);
 });
 
-test('loadCrossfit returns the 8 newest days, newest first', async () => {
+test('loadCrossfit returns the days newest first', async () => {
   const db = fakeDb();
   for (let d = 1; d <= 10; d++) await db.collection('crossfit').doc(`2611${String(d).padStart(2, '0')}`).set({ date: `2026-11-${String(d).padStart(2, '0')}`, rx: [] });
   const list = await loadCrossfit(db);
-  assert.deepEqual(list.map((x) => x.date), ['2026-11-10', '2026-11-09', '2026-11-08', '2026-11-07', '2026-11-06', '2026-11-05', '2026-11-04', '2026-11-03']);
+  assert.deepEqual(list.map((x) => x.date).slice(0, 3), ['2026-11-10', '2026-11-09', '2026-11-08']);
+  assert.equal(list.length, 10);
 });

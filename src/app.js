@@ -1,4 +1,4 @@
-import { buildMovementSummary, recentWindow, resultText } from './core.js';
+import { buildMovementSummary, recentWindow, resultText, pickCrossfit, safeUrl } from './core.js';
 import * as store from './store.js';
 import { t, getLang, setLang } from './i18n.js';
 import { wireLog, titleForBlock, styleForLayout, renderPending } from './log.js';
@@ -107,7 +107,7 @@ function cfDay(d) {
   return h('div', { class: 'cf-day' }, head,
     versionBox('rx', d.rx), versionBox('intermediate', d.intermediate), versionBox('beginner', d.beginner),
     d.stimulus ? h('p', { class: 'msg' }, d.stimulus) : null,
-    d.url ? h('a', { href: d.url, target: '_blank', rel: 'noopener' }, t('openOnSite')) : null);
+    safeUrl(d.url) ? h('a', { href: safeUrl(d.url), target: '_blank', rel: 'noopener' }, t('openOnSite')) : null);
 }
 
 function renderCrossfit() {
@@ -122,9 +122,7 @@ function renderCrossfit() {
 }
 
 export async function loadCrossfitState() {
-  const list = await store.loadCrossfit(state.db);
-  const today = todayISO();
-  state.crossfit = { today: list.find((d) => d.date === today) ?? null, past: list.filter((d) => d.date < today).slice(0, 7), newest: list[0]?.date ?? null };
+  state.crossfit = pickCrossfit(await store.loadCrossfit(state.db), todayISO());
   renderCrossfit();
 }
 

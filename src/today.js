@@ -6,6 +6,7 @@ import { t } from './i18n.js';
 import { state, show, hide, renderToday, reloadSessions, historyContext, isReadOnlyError, markReadOnly } from './app.js';
 import { showError, parseSessions } from './log.js';
 import { mergeParsed } from './forms.js';
+import { workoutForLog } from './core.js';
 
 const $ = (id) => document.getElementById(id);
 let ctrl = null;
@@ -66,7 +67,7 @@ async function saveDone() {
   const today = historyContext().today;
   try {
     if (pendingDone?.w !== w || pendingDone.result !== result) {
-      const text = `Planned workout completed on ${today}:\n${JSON.stringify(w)}\n\nAthlete's result: ${result || '(completed as written)'}`;
+      const text = `Planned workout completed on ${today}:\n${JSON.stringify(workoutForLog(w))}\n\nAthlete's result: ${result || '(completed as written)'}`;
       pendingDone = { w, result, session: mergeParsed(await parseSessions(text)) };
     }
   } catch (e) {

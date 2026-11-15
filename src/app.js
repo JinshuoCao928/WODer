@@ -1,7 +1,7 @@
 import { buildMovementSummary, recentWindow, resultText } from './core.js';
 import * as store from './store.js';
-import { t } from './i18n.js';
-import { wireLog, titleForBlock, styleForLayout } from './log.js';
+import { t, getLang, setLang } from './i18n.js';
+import { wireLog, titleForBlock, styleForLayout, renderPending } from './log.js';
 import { openForm } from './logform.js';
 import { wireToday } from './today.js';
 
@@ -9,8 +9,8 @@ const $ = (id) => document.getElementById(id);
 
 export const state = {
   db: null, user: null, sample: null, uid: null,
-  sessions: [], profile: { unit: 'kg', level: 'intermediate', about: '' },
-  historyOk: false, workout: null, style: 'wod',
+  sessions: [], profile: { unit: 'kg', distance: 'metric', level: 'intermediate', about: '' },
+  historyOk: false, workout: null,
 };
 
 // ---------- small DOM helper (textContent only; never innerHTML with data) ----------
@@ -33,7 +33,7 @@ export const historyContext = () => {
   const sessions = state.historyOk ? state.sessions : [];
   const records = sessions.flatMap((s) => (s.blocks ?? []).filter((b) => b.type === 'pr' && b.movements?.[0])
     .map((b) => `${b.movements[0].name} ${resultText(b) ?? ''}`.trim() + (s.date ? ` (${s.date})` : '')));
-  return { today, profile: state.profile, records, recent: recentWindow(sessions, today), summary: buildMovementSummary(sessions, state.profile.unit) };
+  return { today, lang: getLang(), distance: state.profile.distance, profile: state.profile, records, recent: recentWindow(sessions, today), summary: buildMovementSummary(sessions, state.profile.unit) };
 };
 
 export function show(el, text) {
@@ -75,10 +75,10 @@ export function renderBlocks(blocks) {
     b.note ? h('p', { class: 'msg' }, b.note) : null));
 }
 
-export function renderWorkoutCard(w, { example = false } = {}) {
+export function renderWorkoutCard(w) {
   return h('article', { class: 'card' },
     h('div', { class: 'card-head' },
-      h('span', { class: example ? 'tag example' : 'tag' }, example ? t('example') : styleLabel(w.style)),
+      h('span', { class: 'tag' }, styleLabel(w.style)),
       h('h2', { class: 'card-title' }, w.title),
       w.rationale ? h('p', { class: 'rationale' }, w.rationale) : null),
     renderBlocks(w.blocks));
@@ -86,20 +86,9 @@ export function renderWorkoutCard(w, { example = false } = {}) {
 
 const styleLabel = (s) => t('style' + s.charAt(0).toUpperCase() + s.slice(1));
 
-// Shown before the first workout is designed, clearly marked as an example.
-const EXAMPLE = {
-  title: 'Back & pull', style: 'strength', rationale: t('exampleNote'),
-  blocks: [
-    { name: 'Warm-up', format: '8 min', movements: [{ name: 'Row', reps: '500m', sets: null, load: null, unit: null, note: 'easy pace' }, { name: 'Band pull-apart', sets: 2, reps: 15, load: null, unit: null, note: null }] },
-    { name: 'Strength', format: '5x5', movements: [{ name: 'Pendlay row', sets: 5, reps: 5, load: 70, unit: 'kg', note: 'last: 65kg x5 on 2026-11-02' }] },
-    { name: 'Metcon', format: 'AMRAP 12', movements: [{ name: 'Pull-up', sets: null, reps: 8, load: null, unit: null, note: null }, { name: 'Kettlebell swing', sets: null, reps: 12, load: 24, unit: 'kg', note: null }] },
-    { name: 'Cooldown', format: '5 min', movements: [{ name: 'Lat stretch', sets: null, reps: '1 min/side', load: null, unit: null, note: null }] },
-  ],
-};
-
 export function renderToday() {
   const card = $('card');
-  card.replaceChildren(state.workout ? renderWorkoutCard(state.workout) : renderWorkoutCard(EXAMPLE, { example: true }));
+  card.replaceChildren(state.workout ? renderWorkoutCard(state.workout) : h('div', { class: 'empty' }, t('emptyToday')));
   $('after').hidden = !state.workout;
   $('doneRow').hidden = !(state.db && state.uid);
 }
@@ -170,18 +159,16 @@ export async function reloadSessions() {
 }
 
 function renderProfile() {
-  $('unitSel').value = state.profile.unit;
   $('levelSel').value = state.profile.level;
   $('aboutInput').value = state.profile.about;
 }
 
 function wireProfile() {
   $('saveProfileBtn').addEventListener('click', async () => {
-    const profile = { unit: $('unitSel').value, level: $('levelSel').value, about: $('aboutInput').value.trim() };
-    state.profile = profile;
+    state.profile = { ...state.profile, level: $('levelSel').value, about: $('aboutInput').value.trim() };
     if (!state.db || !state.uid) return show('profileMsg', t('signIn'));
     try {
-      await store.saveProfile(state.db, state.uid, profile);
+      await store.saveProfile(state.db, state.uid, state.profile);
       show('profileMsg', t('profileSaved'));
       renderHistory();
     } catch (e) {
@@ -193,10 +180,38 @@ function wireProfile() {
 
 // ---------- Shell ----------
 function applyStrings() {
-  document.documentElement.lang = t('tabToday') === 'Today' ? 'en' : 'zh';
+  document.documentElement.lang = getLang();
   for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
   for (const el of document.querySelectorAll('[data-i18n-ph]')) el.placeholder = t(el.dataset.i18nPh);
+  for (const el of document.querySelectorAll('[data-i18n-aria]')) el.setAttribute('aria-label', t(el.dataset.i18nAria));
+  $('langBtn').textContent = t('langSwitch');
+  $('langBtn').lang = getLang() === 'zh' ? 'en' : 'zh';
   $('todayDate').textContent = todayISO();
+  renderUnits();
+}
+
+function renderUnits() {
+  for (const b of document.querySelectorAll('#unitSeg button')) b.setAttribute('aria-pressed', String(b.dataset.unit === state.profile.unit));
+  for (const b of document.querySelectorAll('#distSeg button')) b.setAttribute('aria-pressed', String(b.dataset.dist === state.profile.distance));
+}
+
+// Corner switches: language (this device only) and units (saved in the profile when signed in).
+function wireToggles() {
+  $('langBtn').addEventListener('click', () => {
+    setLang(getLang() === 'zh' ? 'en' : 'zh');
+    applyStrings();
+    renderToday();
+    renderHistory();
+    renderPending();
+  });
+  const saveUnits = async (change) => {
+    state.profile = { ...state.profile, ...change };
+    renderUnits();
+    if (!state.db || !state.uid) return;
+    try { await store.saveProfile(state.db, state.uid, state.profile); } catch (e) { if (isReadOnlyError(e)) markReadOnly(); }
+  };
+  for (const b of document.querySelectorAll('#unitSeg button')) b.addEventListener('click', () => saveUnits({ unit: b.dataset.unit }));
+  for (const b of document.querySelectorAll('#distSeg button')) b.addEventListener('click', () => saveUnits({ distance: b.dataset.dist }));
 }
 
 export let selectTab = () => {};
@@ -236,6 +251,7 @@ async function start() {
   applyStrings();
   wireTabs();
   wireProfile();
+  wireToggles();
   wireLog();
   wireToday();
   renderToday();
@@ -257,6 +273,7 @@ async function start() {
     const profile = await store.loadProfile(db, state.uid);
     if (profile) state.profile = { ...state.profile, ...profile };
     renderProfile();
+    renderUnits();
     await reloadSessions();
     if (state.sessions.length === 0) { selectTab('log'); show('welcome'); }
   } catch {

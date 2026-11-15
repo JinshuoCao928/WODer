@@ -1,0 +1,20 @@
+// Warm-up library supplied by the athlete; Claude picks warm-up movements from it (see WORKOUT_RULES in core.js).
+export const WARMUPS = [
+  { category: 'General Warm-Up', items: [['Jumping Jacks', '30–50 reps'], ['High Knees', '30 sec'], ['Butt Kicks', '30 sec'],
+    ['Single-Unders', '60 sec'], ['Easy Row', '2–3 min'], ['Easy Bike', '2–3 min'], ['Easy SkiErg', '2–3 min'], ['Light Jog', '200–400 m'],
+    ['Mountain Climbers', '20 reps'], ['Inchworms', '5–10 reps'], ['Bear Crawls', '10–20 m'], ['Lateral Shuffles', '20 m'], ['Carioca Drill', '20 m']] },
+  { category: 'Dynamic Mobility', items: [["World's Greatest Stretch", '5/side'], ['Cat-Cow', '10'], ['Thread the Needle', '8/side'],
+    ['Arm Circles', '15 each direction'], ['Arm Swings', '20'], ['Shoulder Pass-Throughs', '15'], ['PVC Dislocates', '10–15'],
+    ['Thoracic Rotations', '10/side'], ['90/90 Hip Switches', '10'], ['Leg Swings (Front-to-Back)', '15/side'], ['Leg Swings (Side-to-Side)', '15/side'],
+    ['Walking Knee Hugs', '10/side'], ['Walking Quad Stretch', '10/side'], ['Deep Squat Hold', '30 sec'], ['Cossack Squats', '8/side'],
+    ['Spiderman Lunges', '8/side'], ['Ankle Rocks', '15/side'], ['Wrist Circles', '20']] },
+  { category: 'Activation', items: [['Glute Bridges', '15'], ['Single-Leg Glute Bridges', '10/side'], ['Banded Lateral Walks', '10 steps/side'],
+    ['Monster Walks', '10 steps each direction'], ['Clamshells', '15/side'], ['Dead Bugs', '10/side'], ['Bird Dogs', '10/side'],
+    ['Hollow Holds', '20–30 sec'], ['Superman Holds', '20 sec'], ['Plank Shoulder Taps', '20'], ['Scapular Push-Ups', '12'],
+    ['Scapular Pull-Ups', '10'], ['Banded Pull-Aparts', '20'], ['Banded Face Pulls', '15'], ['Banded External Rotations', '12/side'], ['Pallof Press', '10/side']] },
+  { category: 'Movement Preparation', items: [['Air Squats', '15'], ['Tempo Air Squats', '10'], ['Squat Therapy', '10'], ['PVC Front Squats', '10'],
+    ['PVC Overhead Squats', '10'], ['PVC Good Mornings', '15'], ['Empty Bar Deadlifts', '10'], ['Empty Bar Front Squats', '10'],
+    ['Empty Bar Strict Press', '10'], ['Empty Bar Push Press', '10'], ['Muscle Cleans', '5–8'], ['Tall Cleans', '5'], ['Muscle Snatches', '5–8'],
+    ['Tall Snatches', '5'], ['Burgener Warm-Up', '1–2 rounds'], ['Jumping Pull-Ups', '10'], ['Kip Swings', '10'], ['Hollow-to-Arch Swings', '10'],
+    ['Box Step-Ups', '10/side'], ['Low Box Jumps', '5–8'], ['Light Kettlebell Swings', '10–15'], ['Light Wall Ball Shots', '10']] },
+];

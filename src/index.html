@@ -48,7 +48,18 @@
     padding-block: 20px 48px;
     display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px;
   }
-  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: baseline; gap: 12px; }
+  .toggles { display: flex; gap: 6px; flex-wrap: wrap; }
+  .toggle, .seg button {
+    font: 600 13px/1 var(--font-display); letter-spacing: 0.04em; padding: 8px 10px; cursor: pointer;
+    background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 999px;
+  }
+  .seg { display: flex; }
+  .seg button { border-radius: 0; }
+  .seg button:first-child { border-radius: 999px 0 0 999px; }
+  .seg button:last-child { border-radius: 0 999px 999px 0; border-left: 0; }
+  .seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
   h1 { margin: 0; font: 700 34px/1 var(--font-display); letter-spacing: 0.01em; text-transform: uppercase; }
   h1 span { color: var(--accent); }
   .today-date { font: 500 13px/1 var(--font-data); color: var(--muted); }
@@ -133,7 +144,9 @@
   .lf-check input { width: auto; }
   .lf-move { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
   .lf-time { display: flex; gap: 6px; align-items: center; }
-  .lf-time select { flex: 1 1 0; min-width: 0; }
+  .lf-time > * { flex: 1 1 0; min-width: 0; }
+  .lf-time > span[aria-hidden] { flex: 0 0 auto; }
+  .lf-num { display: block; }
   .lf input:disabled { opacity: 0.5; }
   .history-group { font: 600 13px/1.2 var(--font-display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 16px 0 4px; }
 
@@ -161,8 +174,19 @@
 
 <div class="wrap">
   <header>
-    <h1>WOD<span>er</span></h1>
-    <span class="today-date" id="todayDate"></span>
+    <div class="brand">
+      <h1>WOD<span>er</span></h1>
+      <span class="today-date" id="todayDate"></span>
+    </div>
+    <div class="toggles">
+      <button type="button" class="toggle" id="langBtn" lang="zh">中文</button>
+      <div class="seg" role="group" id="unitSeg" data-i18n-aria="weightUnit">
+        <button type="button" data-unit="kg" aria-pressed="true">kg</button><button type="button" data-unit="lb" aria-pressed="false">lb</button>
+      </div>
+      <div class="seg" role="group" id="distSeg" data-i18n-aria="distanceUnit">
+        <button type="button" data-dist="metric" aria-pressed="true">m·km</button><button type="button" data-dist="imperial" aria-pressed="false">ft·mi</button>
+      </div>
+    </div>
   </header>
 
   <nav class="tabs" role="tablist">
@@ -175,17 +199,59 @@
 
   <section class="panel" id="panel-today" role="tabpanel" aria-labelledby="tab-today">
     <div class="ai-only field">
-      <span class="label" id="styleLabel">Style</span>
-      <div class="chips" id="styleChips" role="group" aria-labelledby="styleLabel">
-        <button class="chip" data-style="wod" aria-pressed="true" data-i18n="styleWod">WOD</button>
-        <button class="chip" data-style="strength" aria-pressed="false" data-i18n="styleStrength">Strength</button>
-        <button class="chip" data-style="conditioning" aria-pressed="false" data-i18n="styleConditioning">Conditioning</button>
-        <button class="chip" data-style="mobility" aria-pressed="false" data-i18n="styleMobility">Mobility</button>
+      <label for="feel" data-i18n="feelLabel">How do you feel today?</label>
+      <input id="feel" data-i18n-ph="feelPh">
+    </div>
+    <div class="ai-only field">
+      <span class="label" id="focusLabel" data-i18n="focusLabel">Focus</span>
+      <div class="chips" id="focusChips" role="group" aria-labelledby="focusLabel">
+          <button type="button" class="chip" data-value="Full body" aria-pressed="false" data-i18n="fFull">Full body</button>
+          <button type="button" class="chip" data-value="Legs" aria-pressed="false" data-i18n="fLegs">Legs</button>
+          <button type="button" class="chip" data-value="Back" aria-pressed="false" data-i18n="fBack">Back</button>
+          <button type="button" class="chip" data-value="Chest" aria-pressed="false" data-i18n="fChest">Chest</button>
+          <button type="button" class="chip" data-value="Shoulders" aria-pressed="false" data-i18n="fShoulders">Shoulders</button>
+          <button type="button" class="chip" data-value="Arms" aria-pressed="false" data-i18n="fArms">Arms</button>
+          <button type="button" class="chip" data-value="Core" aria-pressed="false" data-i18n="fCore">Core</button>
+          <button type="button" class="chip" data-value="Engine (cardio)" aria-pressed="false" data-i18n="fEngine">Engine (cardio)</button>
+          <button type="button" class="chip" data-value="Mobility" aria-pressed="false" data-i18n="fMobility">Mobility</button>
+      </div>
+    </div>
+    <div class="ai-only lf-row">
+      <div class="field">
+        <label for="timeAvail" data-i18n="timeLabel">Time available (min)</label>
+        <input id="timeAvail" type="number" inputmode="numeric" min="5" max="180" list="timeList">
+        <datalist id="timeList"><option value="20"></option><option value="30"></option><option value="45"></option><option value="60"></option><option value="90"></option></datalist>
+      </div>
+      <div class="field">
+        <label for="intensity" data-i18n="intensityLabel">Intensity</label>
+        <select id="intensity">
+          <option value="" data-i18n="iAny">Any</option>
+          <option value="Easy" data-i18n="iEasy">Easy</option>
+          <option value="Moderate" data-i18n="iModerate">Moderate</option>
+          <option value="Hard" data-i18n="iHard">Hard</option>
+        </select>
       </div>
     </div>
     <div class="ai-only field">
-      <label for="request" data-i18n="requestLabel">How are you feeling, and what do you want today?</label>
-      <textarea id="request" data-i18n-ph="requestPh"></textarea>
+      <span class="label" id="equipLabel" data-i18n="equipLabel">Equipment</span>
+      <div class="chips" id="equipChips" role="group" aria-labelledby="equipLabel">
+          <button type="button" class="chip" data-value="Full gym" aria-pressed="false" data-i18n="eFull">Full gym</button>
+          <button type="button" class="chip" data-value="Barbell" aria-pressed="false" data-i18n="eBarbell">Barbell</button>
+          <button type="button" class="chip" data-value="Dumbbells" aria-pressed="false" data-i18n="eDumbbells">Dumbbells</button>
+          <button type="button" class="chip" data-value="Kettlebells" aria-pressed="false" data-i18n="eKettlebells">Kettlebells</button>
+          <button type="button" class="chip" data-value="Pull-up bar" aria-pressed="false" data-i18n="ePullup">Pull-up bar</button>
+          <button type="button" class="chip" data-value="Rower / Bike / Ski" aria-pressed="false" data-i18n="eMachines">Rower / Bike / Ski</button>
+          <button type="button" class="chip" data-value="Jump rope" aria-pressed="false" data-i18n="eRope">Jump rope</button>
+          <button type="button" class="chip" data-value="Bodyweight only" aria-pressed="false" data-i18n="eBodyweight">Bodyweight only</button>
+      </div>
+    </div>
+    <div class="ai-only field">
+      <label for="avoid" data-i18n="avoidLabel">Avoid / limitations</label>
+      <input id="avoid" data-i18n-ph="avoidPh">
+    </div>
+    <div class="ai-only field">
+      <label for="extra" data-i18n="extraLabel">Anything else?</label>
+      <textarea id="extra" data-i18n-ph="extraPh"></textarea>
     </div>
     <div class="ai-only row">
       <button class="primary" id="generateBtn" data-i18n="generate">Design my workout</button>
@@ -240,10 +306,6 @@
       <summary data-i18n="profile">Your profile</summary>
       <div class="grid">
         <div class="two">
-          <div class="field">
-            <label for="unitSel" data-i18n="unit">Unit</label>
-            <select id="unitSel"><option value="kg">kg</option><option value="lb">lb</option></select>
-          </div>
           <div class="field">
             <label for="levelSel" data-i18n="level">Level</label>
             <select id="levelSel">

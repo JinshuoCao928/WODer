@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeMovementName, convertLoad, buildMovementSummary, recentWindow, extractJson, validateSession, validateSessionList, validateWorkout, resultText, byNewest, buildParsePrompt, buildGeneratePrompt, buildRevisePrompt, STRICT_SUFFIX, WORKOUT_RULES } from '../src/core.js';
+import { normalizeMovementName, convertLoad, buildMovementSummary, recentWindow, extractJson, validateSession, validateSessionList, validateWorkout, resultText, byNewest, buildParsePrompt, buildGeneratePrompt, buildRevisePrompt, STRICT_SUFFIX, WORKOUT_RULES, describePrefs } from '../src/core.js';
 
 test('name variants merge', () => {
   for (const n of ['Front Squats', 'front squat', '  FRONT   squat ', 'FS'])
@@ -95,8 +95,8 @@ const ctx = { profile: { unit: 'kg', level: 'intermediate', about: 'BS 120kg' },
   summary: { 'Front squat': { latest: { load: 100 }, best: { load: 105 } } }, today: '2026-11-07' };
 
 test('generate prompt carries inputs and all rules', () => {
-  const p = buildGeneratePrompt({ style: 'strength', request: 'legs sore, back focus', ...ctx });
-  for (const s of ['legs sore, back focus', '2026-11-07', JSON.stringify(ctx.summary), 'BS 120kg', 'strength', 'Reply with ONLY the JSON object.']) assert.ok(p.includes(s), s);
+  const p = buildGeneratePrompt({ prefs: { feel: 'legs sore', focus: ['Back'] }, ...ctx });
+  for (const s of ['legs sore', 'Focus: Back', '2026-11-07', JSON.stringify(ctx.summary), 'BS 120kg', 'Reply with ONLY the JSON object.']) assert.ok(p.includes(s), s);
   for (const r of RULES) assert.ok(p.includes(r), r);
   assert.deepEqual(RULES.every((r) => WORKOUT_RULES.includes(r)), true);
 });
@@ -207,7 +207,30 @@ test('undated sessions: skipped in recent window, sorted last, PR counts as best
 });
 
 test('generate prompt lists personal records', () => {
-  const p = buildGeneratePrompt({ style: 'strength', request: 'x', ...ctx, records: ['Back Squat 3RM 140kg'] });
+  const p = buildGeneratePrompt({ prefs: {}, ...ctx, records: ['Back Squat 3RM 140kg'] });
   assert.ok(p.includes('Personal records (any date):'));
   assert.ok(p.includes('Back Squat 3RM 140kg'));
+});
+
+test('describePrefs: one labelled line per filled box, a default when empty', () => {
+  assert.equal(describePrefs({ feel: '', focus: [], time: '', equipment: [], intensity: '', avoid: '', extra: '' }),
+    '(nothing specific: choose a sensible session for the athlete)');
+  assert.equal(describePrefs({ feel: 'legs sore', focus: ['Back', 'Arms'], time: '45', equipment: ['Barbell', 'Dumbbells'],
+    intensity: 'Hard', avoid: 'no running', extra: 'outdoor' }),
+    ['How the athlete feels: legs sore', 'Focus: Back, Arms', 'Time available: 45 min', 'Equipment: Barbell, Dumbbells',
+      'Intensity: Hard', 'Avoid / limitations: no running', 'Anything else: outdoor'].join('\n'));
+});
+
+test('generate and revise prompts carry warm-up rules, library, language and distances', () => {
+  const settings = { lang: 'zh', distance: 'imperial' };
+  for (const p of [buildGeneratePrompt({ prefs: { time: '30' }, ...ctx, ...settings }),
+    buildRevisePrompt({ workout: { title: 'x' }, change: 'y', ...ctx, ...settings })]) {
+    for (const r of ['The warm-up lasts 8-15 minutes', 'leg swings and hip circles', "the World's Greatest Stretch",
+      'arm swings, inchworms', 'empty-bar or PVC version', 'shorten the main work, never the warm-up', 'named "Cool-down"'])
+      assert.ok(p.includes(r), r);
+    for (const m of ['Jumping Jacks (30–50 reps)', "World's Greatest Stretch (5/side)", 'Burgener Warm-Up (1–2 rounds)', 'Pallof Press (10/side)'])
+      assert.ok(p.includes(m), m);
+    assert.ok(p.includes('Language: Chinese'));
+    assert.ok(p.includes('Distances: miles, feet and yards'));
+  }
 });

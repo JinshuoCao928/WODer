@@ -40,10 +40,13 @@ async function design(buildPrompt, btn, label) {
   }
 }
 
+const pressed = (id) => [...document.querySelectorAll(`#${id} .chip[aria-pressed="true"]`)].map((c) => c.dataset.value);
+
 function generate() {
   if (!state.sample) return;
-  const request = $('request').value.trim();
-  design((ctx) => buildGeneratePrompt({ style: state.style, request, ...ctx }), $('generateBtn'), t('generate'));
+  const prefs = { feel: $('feel').value, focus: pressed('focusChips'), time: $('timeAvail').value, equipment: pressed('equipChips'),
+    intensity: $('intensity').value, avoid: $('avoid').value, extra: $('extra').value };
+  design((ctx) => buildGeneratePrompt({ prefs, ...ctx }), $('generateBtn'), t('generate'));
 }
 
 function revise() {
@@ -90,12 +93,8 @@ async function saveDone() {
 }
 
 export function wireToday() {
-  for (const chip of document.querySelectorAll('#styleChips .chip')) {
-    chip.addEventListener('click', () => {
-      state.style = chip.dataset.style;
-      for (const c of document.querySelectorAll('#styleChips .chip')) c.setAttribute('aria-pressed', String(c === chip));
-    });
-  }
+  for (const chip of document.querySelectorAll('#focusChips .chip, #equipChips .chip'))
+    chip.addEventListener('click', () => chip.setAttribute('aria-pressed', String(chip.getAttribute('aria-pressed') !== 'true')));
   $('generateBtn').addEventListener('click', generate);
   $('reviseBtn').addEventListener('click', revise);
   $('changeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing && !ctrl) revise(); });

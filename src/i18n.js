@@ -1,13 +1,20 @@
-// UI strings. Chinese when the browser language is Chinese, English otherwise.
+// UI strings in English and Chinese; the corner switch picks one (default: browser language).
 
 const STRINGS = {
   en: {
     tabToday: 'Today', tabLog: 'Log', tabHistory: 'History',
     styleWod: 'WOD', styleStrength: 'Strength', styleConditioning: 'Conditioning', styleMobility: 'Mobility', styleOther: 'Other',
-    requestLabel: 'How are you feeling, and what do you want today?',
-    requestPh: 'e.g. Did front squats yesterday, legs are sore. Want a back focus. 45 min, full gym.',
+    feelLabel: 'How do you feel today?', feelPh: 'e.g. legs sore from front squats yesterday, slept well',
+    focusLabel: 'Focus', fFull: 'Full body', fLegs: 'Legs', fBack: 'Back', fChest: 'Chest', fShoulders: 'Shoulders', fArms: 'Arms',
+    fCore: 'Core', fEngine: 'Engine (cardio)', fMobility: 'Mobility',
+    timeLabel: 'Time available (min)', intensityLabel: 'Intensity', iAny: 'Any', iEasy: 'Easy', iModerate: 'Moderate', iHard: 'Hard',
+    equipLabel: 'Equipment', eFull: 'Full gym', eBarbell: 'Barbell', eDumbbells: 'Dumbbells', eKettlebells: 'Kettlebells',
+    ePullup: 'Pull-up bar', eMachines: 'Rower / Bike / Ski', eRope: 'Jump rope', eBodyweight: 'Bodyweight only',
+    avoidLabel: 'Avoid / limitations', avoidPh: 'e.g. no running, left shoulder is cranky',
+    extraLabel: 'Anything else?', extraPh: 'e.g. training outdoors, want a short finisher',
+    emptyToday: 'Your workout will appear here. Fill in what you like above and tap Design my workout.',
+    langSwitch: '中文', weightUnit: 'Weight unit', distanceUnit: 'Distance unit',
     generate: 'Design my workout', generating: 'Designing…',
-    example: 'Example', exampleNote: 'This is an example. Your workout will use your own history.',
     changeLabel: 'Change something', changePh: 'e.g. swap pull-ups, my grip is shot', revise: 'Update workout',
     markDone: 'Mark done', resultLabel: 'How did it go?', resultPh: 'e.g. rows felt easy, metcon 12:34', saveResult: 'Save to history', cancel: 'Cancel',
     estimates: 'Loads are estimates. Log a few sessions for suggestions based on your numbers.',
@@ -42,10 +49,17 @@ const STRINGS = {
   zh: {
     tabToday: '今天', tabLog: '记录', tabHistory: '历史',
     styleWod: 'WOD', styleStrength: '力量', styleConditioning: '体能', styleMobility: '灵活性', styleOther: '其他',
-    requestLabel: '今天感觉怎么样？想练什么？',
-    requestPh: '例如：昨天做了前蹲，腿很酸。今天想练背。45 分钟，器械齐全。',
+    feelLabel: '今天感觉怎么样？', feelPh: '例如：昨天做了前蹲，腿很酸，睡得不错',
+    focusLabel: '重点部位', fFull: '全身', fLegs: '腿', fBack: '背', fChest: '胸', fShoulders: '肩', fArms: '手臂',
+    fCore: '核心', fEngine: '心肺', fMobility: '灵活性',
+    timeLabel: '可用时间（分钟）', intensityLabel: '强度', iAny: '不限', iEasy: '轻松', iModerate: '中等', iHard: '高强度',
+    equipLabel: '器械', eFull: '器械齐全', eBarbell: '杠铃', eDumbbells: '哑铃', eKettlebells: '壶铃',
+    ePullup: '单杠', eMachines: '划船机 / 单车 / 滑雪机', eRope: '跳绳', eBodyweight: '只用自重',
+    avoidLabel: '避免 / 限制', avoidPh: '例如：不跑步，左肩不舒服',
+    extraLabel: '其他要求？', extraPh: '例如：在户外练，想加一个短的收尾',
+    emptyToday: '训练会显示在这里。在上面填写你的情况，然后点「设计今天的训练」。',
+    langSwitch: 'EN', weightUnit: '重量单位', distanceUnit: '距离单位',
     generate: '设计今天的训练', generating: '设计中…',
-    example: '示例', exampleNote: '这是示例。你的训练会根据你的历史记录来设计。',
     changeLabel: '修改', changePh: '例如：换掉引体向上，握力不行了', revise: '更新训练',
     markDone: '完成', resultLabel: '练得怎么样？', resultPh: '例如：划船很轻松，metcon 12:34', saveResult: '保存到历史', cancel: '取消',
     estimates: '重量是估计值。多记录几次训练，建议会更贴合你的实际水平。',
@@ -79,9 +93,17 @@ const STRINGS = {
   },
 };
 
-export const LANG = /^zh/i.test(globalThis.navigator?.language ?? '') ? 'zh' : 'en';
+// Saved choice on this device, else the browser language.
+const saved = (() => { try { return localStorage.getItem('woder.lang'); } catch { return null; } })();
+let lang = saved || (/^zh/i.test(globalThis.navigator?.language ?? '') ? 'zh' : 'en');
+
+export const getLang = () => lang;
+export function setLang(next) {
+  lang = next === 'zh' ? 'zh' : 'en';
+  try { localStorage.setItem('woder.lang', lang); } catch { /* storage unavailable */ }
+}
 
 export function t(key, ...args) {
-  const v = STRINGS[LANG][key] ?? STRINGS.en[key] ?? key;
+  const v = STRINGS[lang][key] ?? STRINGS.en[key] ?? key;
   return typeof v === 'function' ? v(...args) : v;
 }

@@ -30,22 +30,29 @@ export function openForm(container, { block = null, date = null, submitLabel, on
   let v = block ? formFromBlock(block, date, unit) : blankForm();
   let error = '';
 
-  const field = (id, labelKey, control, cls = 'field') => h('div', { class: cls }, h('label', { for: p + id }, t(labelKey)), control);
+  const field = (id, labelKey, control, cls = 'field', label = t(labelKey)) => h('div', { class: cls }, h('label', { for: p + id }, label), control);
   const sel = (id, options, value, onChange) => {
     const el = h('select', { id: p + id }, options.map(([val, label]) =>
       h('option', { value: val, selected: String(val) === String(value) }, label)));
     el.addEventListener('change', () => onChange(el.value));
     return el;
   };
-  const nums = (a, b) => [['', t('none')], ...range(a, b).map((n) => [n, n])];
+  // Typable number box with suggestions (datalist); any value can be typed.
+  const numIn = (id, value, onInput, suggestions = [], attrs = {}) => {
+    const el = h('input', { id: p + id, type: 'number', inputmode: 'decimal', step: 'any', min: 0, value,
+      list: suggestions.length ? p + id + '-list' : null, ...attrs });
+    el.addEventListener('input', () => onInput(el.value));
+    return suggestions.length ? h('span', { class: 'lf-num' }, el, h('datalist', { id: p + id + '-list' }, suggestions.map((n) => h('option', { value: n })))) : el;
+  };
   const input = (id, value, onInput, attrs = {}) => {
     const el = h('input', { id: p + id, value, ...attrs });
     el.addEventListener('input', () => onInput(el.value));
     return el;
   };
   const timePair = (id, min, sec, onChange) => h('div', { class: 'lf-time' },
-    sel(id + '-m', [['', t('minShort')], ...range(0, 120).map((n) => [n, `${n} ${t('minShort')}`])], min, (x) => onChange(x, null)),
-    sel(id + '-s', [['', t('secShort')], ...range(0, 59).map((n) => [n, `${String(n).padStart(2, '0')} ${t('secShort')}`])], sec, (x) => onChange(null, x)));
+    numIn(id + '-m', min, (x) => onChange(x, null), [], { step: 1, placeholder: t('minShort') }),
+    h('span', { 'aria-hidden': 'true' }, ':'),
+    numIn(id + '-s', sec, (x) => onChange(null, x), [], { step: 1, max: 59, placeholder: t('secShort'), 'aria-label': t('secShort') }));
 
   const scaledBox = () => container.querySelector(`#${p}scaled`);
   // After a movement or load change on a benchmark, recompute Scaled (a manual tick holds until the next change).
@@ -62,7 +69,6 @@ export function openForm(container, { block = null, date = null, submitLabel, on
     const mf = moveFieldsFor(layout, prKind);
     const rx = v.benchmark ? benchmarkBlock(v.benchmark, unit) : null;
     const loads = weightOptions(unit, [...(rx?.movements ?? []).map((m) => m.load), ...v.movements.map((m) => (m.load === '' ? NaN : Number(m.load)))]);
-    const loadOptions = [['', t('none')], ...loads.map((w) => [w, `${w} ${unit}`])];
 
     const dateInput = h('input', { id: p + 'date', type: 'date', value: v.date, disabled: v.noDate });
     dateInput.addEventListener('input', () => { v.date = dateInput.value; });
@@ -72,13 +78,14 @@ export function openForm(container, { block = null, date = null, submitLabel, on
     scaled.addEventListener('change', () => { v.scaled = scaled.checked; });
 
     const setup = [];
-    if (bf.includes('rounds')) setup.push(field('rounds', 'rounds', sel('rounds', nums(1, 50), v.rounds, (x) => { v.rounds = x; })));
-    if (bf.includes('every')) setup.push(field('every', 'every', sel('every', nums(1, 5), v.every, (x) => { v.every = x; })));
-    if (bf.includes('minutes')) setup.push(field('minutes', layout === 'fortime' ? 'timeCap' : 'minutes', sel('minutes', nums(1, 60), v.minutes, (x) => { v.minutes = x; })));
+    if (bf.includes('rounds')) setup.push(field('rounds', 'rounds', numIn('rounds', v.rounds, (x) => { v.rounds = x; }, range(1, 10), { step: 1 })));
+    if (bf.includes('every')) setup.push(field('every', 'every', numIn('every', v.every, (x) => { v.every = x; }, range(1, 5), { step: 1 })));
+    if (bf.includes('minutes')) setup.push(field('minutes', layout === 'fortime' ? 'timeCap' : 'minutes',
+      numIn('minutes', v.minutes, (x) => { v.minutes = x; }, [5, 10, 12, 15, 20, 30, 40, 60], { step: 1 })));
     if (bf.includes('prKind')) setup.push(field('prkind', 'prKind', sel('prkind', PR_KINDS.map((k) => [k, t(PR_LABEL[k])]), prKind, (x) => { v.prKind = x; render(); })));
 
     const results = [];
-    if (bf.includes('scoreRounds')) results.push(field('srounds', 'scoreRounds', sel('srounds', nums(0, 100), v.scoreRounds, (x) => { v.scoreRounds = x; })));
+    if (bf.includes('scoreRounds')) results.push(field('srounds', 'scoreRounds', numIn('srounds', v.scoreRounds, (x) => { v.scoreRounds = x; }, [], { step: 1 })));
     if (bf.includes('scoreReps')) results.push(field('sreps', layout === 'amrap' ? 'extraReps' : 'totalReps',
       input('sreps', v.scoreReps, (x) => { v.scoreReps = x; }, { type: 'number', inputmode: 'numeric', min: 0 })));
     if (bf.includes('scoreTime')) results.push(field('stime-m', 'time', timePair('stime', v.scoreMin, v.scoreSec, (m, s) => {
@@ -90,13 +97,14 @@ export function openForm(container, { block = null, date = null, submitLabel, on
       if (prKind === 'heaviest' && !m.reps) m.reps = '1';
       const cells = [field(id + 'name', 'movement', input(id + 'name', m.name, (x) => { m.name = x; rescale(); },
         { list: 'movementList', placeholder: t('movementPh'), autocomplete: 'off' }), 'field wide')];
-      if (mf.includes('sets')) cells.push(field(id + 'sets', 'sets', sel(id + 'sets', nums(1, 20), m.sets, (x) => { m.sets = x; })));
+      if (mf.includes('sets')) cells.push(field(id + 'sets', 'sets', numIn(id + 'sets', m.sets, (x) => { m.sets = x; }, range(1, 10), { step: 1 })));
       if (mf.includes('reps')) cells.push(prKind === 'heaviest'
         ? field(id + 'reps', 'repMax', sel(id + 'reps', [1, 2, 3, 5].map((n) => [n, `${n}RM`]), m.reps || 1, (x) => { m.reps = x; }))
         : field(id + 'reps', 'reps', input(id + 'reps', m.reps, (x) => { m.reps = x; }, { list: 'repsList', autocomplete: 'off' })));
-      if (mf.includes('load')) cells.push(field(id + 'load', 'weight', sel(id + 'load', loadOptions, m.load, (x) => { m.load = x; m.unit = ''; rescale(); })));
+      if (mf.includes('load')) cells.push(field(id + 'load', 'weight', numIn(id + 'load', m.load, (x) => { m.load = x; m.unit = ''; rescale(); }, loads),
+        'field', `${t('weight')} (${unit})`));
       if (mf.includes('distance')) cells.push(field(id + 'dist', prKind === 'farthest' ? 'amount' : 'distance',
-        input(id + 'dist', m.distance, (x) => { m.distance = x; }, { placeholder: prKind === 'farthest' ? '42 cal' : '400m' })));
+        input(id + 'dist', m.distance, (x) => { m.distance = x; }, { placeholder: prKind === 'farthest' ? '42 cal' : state.profile.distance === 'imperial' ? '1/4 mile' : '400m' })));
       if (mf.includes('time')) cells.push(field(id + 'time-m', 'time', timePair(id + 'time', m.timeMin, m.timeSec, (mm, ss) => {
         if (mm != null) m.timeMin = mm; if (ss != null) m.timeSec = ss;
       })));

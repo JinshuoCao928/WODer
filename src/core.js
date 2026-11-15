@@ -1,5 +1,6 @@
 // Pure logic for WODer: no DOM, no runtime capabilities. Tested with `npm test`.
 import { MOVEMENTS } from './library.js';
+import { WARMUPS } from './warmups.js';
 
 export const MOVEMENT_ALIASES = {
   'fs': 'Front Squat',
@@ -204,8 +205,36 @@ export const WORKOUT_RULES = [
   'If the athlete mentions pain or injury (not normal soreness), choose a conservative alternative and suggest seeing a professional in the rationale.',
   'In each movement note referencing history, cite it like "last: 65kg x5 on 2026-11-02".',
   'Scaled results show the load the athlete actually used; base suggestions on that, not on Rx.',
-  "Write title, rationale, block names and notes in the same language as the athlete's request; keep movement names in English.",
+  'Write title, rationale, block names and notes in the language given under "Language"; keep movement names in English.',
+  'Write distances in the units given under "Distances".',
+  'Every workout has a block named "Warm-up" first, then one or two main blocks, then a block named "Cool-down".',
+  'The warm-up lasts 8-15 minutes and goes in this order: general warm-up, dynamic mobility, activation, movement preparation. Pick its movements and doses from the warm-up library to match the main work.',
+  'Before cardio or engine work, include leg swings and hip circles, then easy machine work or a light jog.',
+  "Before leg-heavy work, include air squats, lunges and the World's Greatest Stretch.",
+  'Before shoulder, press or pull-heavy work, include arm swings, inchworms, shoulder pass-throughs and scapular push-ups or pull-ups.',
+  'Before barbell lifts, include an empty-bar or PVC version of the main lift.',
+  'If time is short, shorten the main work, never the warm-up.',
+  'The cool-down lists stretches or easy movements for the muscles just trained.',
 ];
+
+const WARMUP_LIBRARY = 'Warm-up library:\n' + WARMUPS.map((c) => `${c.category}: ` + c.items.map(([n, d]) => `${n} (${d})`).join('; ')).join('\n');
+
+const PREF_LINES = [['feel', 'How the athlete feels'], ['focus', 'Focus'], ['time', 'Time available'], ['equipment', 'Equipment'],
+  ['intensity', 'Intensity'], ['avoid', 'Avoid / limitations'], ['extra', 'Anything else']];
+
+// Today page boxes -> one labelled line per filled box.
+export function describePrefs(prefs = {}) {
+  const lines = PREF_LINES.flatMap(([k, label]) => {
+    const v = prefs[k];
+    const text = Array.isArray(v) ? v.join(', ') : String(v ?? '').trim();
+    if (!text) return [];
+    return [`${label}: ${text}${k === 'time' && /^\d+$/.test(text) ? ' min' : ''}`];
+  });
+  return lines.length ? lines.join('\n') : '(nothing specific: choose a sensible session for the athlete)';
+}
+
+const settingsSection = ({ lang, distance }) =>
+  `Language: ${lang === 'zh' ? 'Chinese' : 'English'}\nDistances: ${distance === 'imperial' ? 'miles, feet and yards' : 'meters and kilometers'}`;
 
 const MOVEMENT_TEMPLATE = '{"name": "Pendlay row", "sets": 5, "reps": 5, "load": 70, "unit": "kg", "note": "last: 65kg x5 on 2026-11-02"}';
 const BLOCKS_TEMPLATE = `[{"name": "Strength", "format": "5x5", "movements": [${MOVEMENT_TEMPLATE}], "result": null}]`;
@@ -235,7 +264,7 @@ Per-movement latest and best (in the athlete's unit): ${JSON.stringify(summary ?
 Personal records (any date):
 ${records?.length ? records.join('\n') : '(none)'}`;
 
-const rulesSection = () => 'Rules:\n' + WORKOUT_RULES.map((r, i) => `${i + 1}. ${r}`).join('\n');
+const rulesSection = () => 'Rules:\n' + WORKOUT_RULES.map((r, i) => `${i + 1}. ${r}`).join('\n') + '\n\n' + WARMUP_LIBRARY;
 
 export function buildParsePrompt({ text, today, unit, knownMovements = [] }) {
   return `You convert a gym-goer's free-text workout log into structured JSON.
@@ -263,10 +292,11 @@ ${PARSE_TEMPLATE}
 Reply with ONLY the JSON object.`;
 }
 
-export function buildGeneratePrompt({ style, request, ...ctx }) {
+export function buildGeneratePrompt({ prefs, ...ctx }) {
   return `You are an experienced strength and conditioning coach designing today's single workout for one athlete.
-Requested style: ${style}
-What the athlete says today: """${request || '(nothing specific)'}"""
+What the athlete told you today:
+${describePrefs(prefs)}
+${settingsSection(ctx)}
 ${historySection(ctx)}
 
 ${rulesSection()}
@@ -281,6 +311,7 @@ export function buildRevisePrompt({ workout, change, ...ctx }) {
   return `You are an experienced strength and conditioning coach revising today's workout for one athlete.
 Current workout: ${JSON.stringify(workout)}
 Requested change: """${change}"""
+${settingsSection(ctx)}
 ${historySection(ctx)}
 
 Return the complete revised workout, not only the changed parts.

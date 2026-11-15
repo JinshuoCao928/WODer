@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeMovementName, convertLoad, buildMovementSummary, recentWindow, extractJson, validateSession, validateSessionList, validateWorkout, resultText, byNewest, buildParsePrompt, buildGeneratePrompt, buildRevisePrompt, STRICT_SUFFIX, WORKOUT_RULES, describePrefs } from '../src/core.js';
+import { normalizeMovementName, convertLoad, buildMovementSummary, recentWindow, extractJson, validateSession, validateSessionList, validateWorkout, resultText, byNewest, buildParsePrompt, buildGeneratePrompt, buildRevisePrompt, STRICT_SUFFIX, WORKOUT_RULES, describePrefs, crossfitText } from '../src/core.js';
 
 test('name variants merge', () => {
   for (const n of ['Front Squats', 'front squat', '  FRONT   squat ', 'FS'])
@@ -248,4 +248,29 @@ test('validateWorkout keeps CrossFit-style versions and stimulus', () => {
   assert.equal(plain.value.blocks[0].versions, null);
   assert.equal(plain.value.blocks[0].stimulus, null);
   assert.equal(validateWorkout({ ...w, blocks: [{ ...main, versions: { rx: 'x' } }] }).ok, false);
+});
+
+const CF_TODAY = { date: '2026-11-18', name: null, rest: false,
+  rx: ['For time:', '21 box jumps (24/30 in)', '21 hang power cleans (95/135 lb)'],
+  intermediate: ['For time:', '21 box jumps (20/24 in)'], beginner: null, stimulus: '18-23 min; push the runs', url: 'https://www.crossfit.com/261118' };
+const CF_REST = { date: '2026-11-17', name: null, rest: true, rx: [], intermediate: null, beginner: null, stimulus: '', url: '' };
+const CF_HELEN = { date: '2026-11-16', name: 'Helen', rest: false, rx: ['3 rounds for time of:', '400-meter run', '21 kettlebell swings', '12 pull-ups'],
+  intermediate: null, beginner: null, stimulus: '', url: '' };
+
+test('crossfitText is one compact line', () => {
+  assert.equal(crossfitText(CF_REST), '2026-11-17: rest day');
+  assert.equal(crossfitText(CF_HELEN), '2026-11-16 Helen: 3 rounds for time of: / 400-meter run / 21 kettlebell swings / 12 pull-ups');
+});
+
+test('prompts start from today\'s CrossFit.com workout and ask for the CrossFit format', () => {
+  const p = buildGeneratePrompt({ prefs: {}, ...ctx, crossfit: { today: CF_TODAY, past: [CF_REST, CF_HELEN] } });
+  for (const s of ['CrossFit.com today:', '21 hang power cleans (95/135 lb)', "Intermediate: For time: / 21 box jumps (20/24 in)",
+    "Beginner: Same as Rx'd", '18-23 min; push the runs', 'CrossFit.com past 7 days:', '2026-11-17: rest day', '2026-11-16 Helen:', 'Athlete level: intermediate',
+    "Start from today's CrossFit.com workout", 'versions.rx, versions.intermediate and versions.beginner', '(female/male <unit>)',
+    '"stimulus": 2-4 short bullets', "the option for their level (beginner -> beginner, intermediate -> intermediate, advanced -> rx)",
+    'The rationale is 3-4 sentences', '"versions"'])
+    assert.ok(p.includes(s), s);
+  const none = buildGeneratePrompt({ prefs: {}, ...ctx, crossfit: { today: null, past: [] } });
+  assert.ok(none.includes('No CrossFit.com workout today.'));
+  assert.ok(buildRevisePrompt({ workout: {}, change: 'x', ...ctx, crossfit: { today: CF_TODAY, past: [] } }).includes('CrossFit.com today:'));
 });

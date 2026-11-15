@@ -219,7 +219,22 @@ export const WORKOUT_RULES = [
   'Before barbell lifts, include an empty-bar or PVC version of the main lift.',
   'If time is short, shorten the main work, never the warm-up.',
   'The cool-down lists stretches or easy movements for the muscles just trained.',
+  "Start from today's CrossFit.com workout: keep it, adapt it or replace it based on the athlete's history, recovery, stated feeling, focus, time and equipment, and say which in the rationale. If there is none, design freely and say so.",
+  'Each main block gives versions.rx, versions.intermediate and versions.beginner as CrossFit-style lines: a format line ("For time:", "AMRAP 12 min:", ...), then one movement per line with loads as (female/male <unit>), e.g. "21 hang power cleans (95/135 lb)", in the athlete\'s weight unit.',
+  'Each main block gives "stimulus": 2-4 short bullets on time domain, pacing, set breaks and intent.',
+  "A main block's \"movements\" are the athlete's own version: the option for their level (beginner -> beginner, intermediate -> intermediate, advanced -> rx), with loads from their history.",
+  "The rationale is 3-4 sentences: how it relates to today's CrossFit.com workout, what the athlete and CrossFit.com trained this week, and the athlete's stated feeling, focus and limits.",
 ];
+
+const cfLines = (lines) => (lines?.length ? lines.join(' / ') : "Same as Rx'd");
+// One compact line per CrossFit.com day (past 7 days section).
+export const crossfitText = (d) => (d.rest ? `${d.date}: rest day` : `${d.date}${d.name ? ' ' + d.name : ''}: ${cfLines(d.rx)}`);
+
+const crossfitSection = ({ today, past } = {}) => `${today && !today.rest
+  ? `CrossFit.com today: ${crossfitText(today)}\nIntermediate: ${cfLines(today.intermediate)}\nBeginner: ${cfLines(today.beginner)}\nStimulus: ${today.stimulus || '-'}`
+  : today?.rest ? 'CrossFit.com today: rest day. No CrossFit.com workout today.' : 'No CrossFit.com workout today.'}
+CrossFit.com past 7 days:
+${past?.length ? past.map(crossfitText).join('\n') : '(none loaded)'}`;
 
 const WARMUP_LIBRARY = 'Warm-up library:\n' + WARMUPS.map((c) => `${c.category}: ` + c.items.map(([n, d]) => `${n} (${d})`).join('; ')).join('\n');
 
@@ -257,12 +272,14 @@ const PARSE_TEMPLATE = `{"sessions": [
    "movements": [{"name": "Back Squat", "reps": 3, "load": 140, "unit": "kg"}]}]}
 ]}`;
 
-const WORKOUT_TEMPLATE = `{"title": "...", "rationale": "one sentence on the main choices", "style": ${STYLE_ENUM}, "focus": ["back"], "blocks": ${BLOCKS_TEMPLATE}}
-Use blocks in this order: Warm-up, Strength/Skill, Main piece, Cooldown.`;
+const MAIN_TEMPLATE = `{"name": "Main", "type": "fortime", "format": "For Time", "versions": {"rx": ["For time:", "21 box jumps (24/30 in)", "21 hang power cleans (95/135 lb)"], "intermediate": ["For time:", "21 box jumps (20/24 in)", "21 hang power cleans (75/105 lb)"], "beginner": ["For time:", "15 step-ups (20/24 in)", "15 hang power cleans (35/45 lb)"]}, "stimulus": ["18:00-23:00", "Cleans in 1:30 or less per set"], "movements": [${MOVEMENT_TEMPLATE}], "result": null}`;
+const WORKOUT_TEMPLATE = `{"title": "...", "rationale": "3-4 sentences: why this workout", "style": ${STYLE_ENUM}, "focus": ["back"], "blocks": [{"name": "Warm-up", "format": "10 min", "movements": [${MOVEMENT_TEMPLATE}], "result": null}, ${MAIN_TEMPLATE}, {"name": "Cool-down", "format": "5 min", "movements": [${MOVEMENT_TEMPLATE}], "result": null}]}`;
 
-const historySection = ({ profile, recent, summary, today, records }) =>
+const historySection = ({ profile, recent, summary, today, records, crossfit }) =>
   `Today: ${today}
 Athlete profile: ${JSON.stringify(profile ?? null)}
+Athlete level: ${profile?.level ?? 'intermediate'}
+${crossfitSection(crossfit)}
 Sessions from the last 14 days (newest first): ${JSON.stringify(recent ?? [])}
 Per-movement latest and best (in the athlete's unit): ${JSON.stringify(summary ?? {})}
 Personal records (any date):

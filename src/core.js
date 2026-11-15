@@ -211,7 +211,7 @@ export const WORKOUT_RULES = [
   'If the athlete mentions pain or injury (not normal soreness), choose a conservative alternative and suggest seeing a professional in the rationale.',
   'In each movement note referencing history, cite it like "last: 65kg x5 on 2026-11-02".',
   'Scaled results show the load the athlete actually used; base suggestions on that, not on Rx.',
-  'Write title, rationale, block names and notes in the language given under "Language"; keep movement names in English.',
+  'Write everything in English.',
   'Write distances in the units given under "Distances".',
   'Every workout has a block named "Warm-up" first, then one or two main blocks, then a block named "Cool-down".',
   'The warm-up lasts 8-15 minutes and goes in this order: general warm-up, dynamic mobility, activation, movement preparation. Pick its movements and doses from the warm-up library to match the main work.',
@@ -267,8 +267,8 @@ export function describePrefs(prefs = {}) {
   return lines.length ? lines.join('\n') : '(nothing specific: choose a sensible session for the athlete)';
 }
 
-const settingsSection = ({ lang, distance }) =>
-  `Language: ${lang === 'zh' ? 'Chinese' : 'English'}\nDistances: ${distance === 'imperial' ? 'miles, feet and yards' : 'meters and kilometers'}`;
+const settingsSection = ({ distance }) =>
+  `Distances: ${distance === 'imperial' ? 'miles, feet and yards' : 'meters and kilometers'}`;
 
 const MOVEMENT_TEMPLATE = '{"name": "Pendlay row", "sets": 5, "reps": 5, "load": 70, "unit": "kg", "note": "last: 65kg x5 on 2026-11-02"}';
 const BLOCKS_TEMPLATE = `[{"name": "Strength", "format": "5x5", "movements": [${MOVEMENT_TEMPLATE}], "result": null}]`;

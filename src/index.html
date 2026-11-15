@@ -51,7 +51,7 @@
   header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   .brand { display: flex; align-items: baseline; gap: 12px; }
   .toggles { display: flex; gap: 6px; flex-wrap: wrap; }
-  .toggle, .seg button {
+  .seg button {
     font: 600 13px/1 var(--font-display); letter-spacing: 0.04em; padding: 8px 10px; cursor: pointer;
     background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 999px;
   }
@@ -192,7 +192,6 @@
       <span class="today-date" id="todayDate"></span>
     </div>
     <div class="toggles">
-      <button type="button" class="toggle" id="langBtn" lang="zh">中文</button>
       <div class="seg" role="group" id="unitSeg" data-i18n-aria="weightUnit">
         <button type="button" data-unit="kg" aria-pressed="true">kg</button><button type="button" data-unit="lb" aria-pressed="false">lb</button>
       </div>

@@ -222,7 +222,7 @@ test('describePrefs: one labelled line per filled box, a default when empty', ()
 });
 
 test('generate and revise prompts carry warm-up rules, library, language and distances', () => {
-  const settings = { lang: 'zh', distance: 'imperial' };
+  const settings = { distance: 'imperial' };
   for (const p of [buildGeneratePrompt({ prefs: { time: '30' }, ...ctx, ...settings }),
     buildRevisePrompt({ workout: { title: 'x' }, change: 'y', ...ctx, ...settings })]) {
     for (const r of ['The warm-up lasts 8-15 minutes', 'leg swings and hip circles', "the World's Greatest Stretch",
@@ -230,7 +230,6 @@ test('generate and revise prompts carry warm-up rules, library, language and dis
       assert.ok(p.includes(r), r);
     for (const m of ['Jumping Jacks (30–50 reps)', "World's Greatest Stretch (5/side)", 'Burgener Warm-Up (1–2 rounds)', 'Pallof Press (10/side)'])
       assert.ok(p.includes(m), m);
-    assert.ok(p.includes('Language: Chinese'));
     assert.ok(p.includes('Distances: miles, feet and yards'));
   }
 });

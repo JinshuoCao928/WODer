@@ -41,7 +41,7 @@ export function entryCard({ date, block }, actions) {
     h('div', { class: 'card-actions' }, actions));
 }
 
-export function renderPending() {
+function renderPending() {
   const list = $('pendingList');
   list.replaceChildren(...pending.map((entry, i) => {
     const slot = h('div', {});

@@ -1,4 +1,4 @@
-// UI strings in English and Chinese; the corner switch picks one (default: browser language).
+// UI strings (English only).
 
 const STRINGS = {
   en: {
@@ -13,7 +13,7 @@ const STRINGS = {
     avoidLabel: 'Avoid / limitations', avoidPh: 'e.g. no running, left shoulder is cranky',
     extraLabel: 'Anything else?', extraPh: 'e.g. training outdoors, want a short finisher',
     emptyToday: 'Your workout will appear here. Fill in what you like above and tap Design my workout.',
-    langSwitch: '中文', weightUnit: 'Weight unit', distanceUnit: 'Distance unit',
+    weightUnit: 'Weight unit', distanceUnit: 'Distance unit',
     generate: 'Design my workout', generating: 'Designing…',
     changeLabel: 'Change something', changePh: 'e.g. swap pull-ups, my grip is shot', revise: 'Update workout',
     markDone: 'Mark done', resultLabel: 'How did it go?', resultPh: 'e.g. rows felt easy, metcon 12:34', saveResult: 'Save to history', cancel: 'Cancel',
@@ -51,69 +51,9 @@ const STRINGS = {
     stimulus: 'Intended Stimulus', yourLoads: 'Your loads', whyThis: 'Why this workout',
     lastSessions: (n) => `${n} session${n === 1 ? '' : 's'} logged`,
   },
-  zh: {
-    tabToday: '今天', tabLog: '记录', tabHistory: '历史',
-    styleWod: 'WOD', styleStrength: '力量', styleConditioning: '体能', styleMobility: '灵活性', styleOther: '其他',
-    feelLabel: '今天感觉怎么样？', feelPh: '例如：昨天做了前蹲，腿很酸，睡得不错',
-    focusLabel: '重点部位', fFull: '全身', fLegs: '腿', fBack: '背', fChest: '胸', fShoulders: '肩', fArms: '手臂',
-    fCore: '核心', fEngine: '心肺', fMobility: '灵活性',
-    timeLabel: '可用时间（分钟）', intensityLabel: '强度', iAny: '不限', iEasy: '轻松', iModerate: '中等', iHard: '高强度',
-    equipLabel: '器械', eFull: '器械齐全', eBarbell: '杠铃', eDumbbells: '哑铃', eKettlebells: '壶铃',
-    ePullup: '单杠', eMachines: '划船机 / 单车 / 滑雪机', eRope: '跳绳', eBodyweight: '只用自重',
-    avoidLabel: '避免 / 限制', avoidPh: '例如：不跑步，左肩不舒服',
-    extraLabel: '其他要求？', extraPh: '例如：在户外练，想加一个短的收尾',
-    emptyToday: '训练会显示在这里。在上面填写你的情况，然后点「设计今天的训练」。',
-    langSwitch: 'EN', weightUnit: '重量单位', distanceUnit: '距离单位',
-    generate: '设计今天的训练', generating: '设计中…',
-    changeLabel: '修改', changePh: '例如：换掉引体向上，握力不行了', revise: '更新训练',
-    markDone: '完成', resultLabel: '练得怎么样？', resultPh: '例如：划船很轻松，metcon 12:34', saveResult: '保存到历史', cancel: '取消',
-    estimates: '重量是估计值。多记录几次训练，建议会更贴合你的实际水平。',
-    logLabel: '你练了什么？', logPh: '例如：昨天 前蹲 5组x3次 100kg，然后 21-15-9 推举蹲 40kg 和引体向上，用时 8:12。腿很沉。',
-    preview: '识别', reading: '识别中…', save: '保存', edit: '修改文字', saved: '已保存到历史。', savedN: (n) => `已保存 ${n} 次训练到历史。`,
-    welcome: '第一次使用？先把你最近的训练记录贴到下面，几天的都可以一起贴。Claude 会帮你整理成一次次训练，以后就根据这些记录来设计你的训练。你的记录只有你自己能看到。',
-    viewOnly: '你对这个页面只有查看权限，所以无法保存记录。请让页面主人给你编辑权限。',
-    checkPreview: '保存前请检查一下。',
-    historyEmpty: '你的训练记录会显示在这里。去「记录」添加第一条，或把设计好的训练标记为完成。',
-    deleteSession: '删除', confirmDelete: '再点一次删除',
-    profile: '个人资料', unit: '单位', level: '水平', about: '关于你',
-    aboutPh: '例如：后蹲 1RM 120kg。左肩不太舒服。在 CrossFit 馆训练。',
-    levelBeginner: '初级', levelIntermediate: '中级', levelAdvanced: '高级', saveProfile: '保存资料', profileSaved: '资料已保存。',
-    signIn: '登录 claude.ai 才能保存历史记录。不登录也可以设计训练。',
-    noAi: '这个页面没有获得调用 Claude 的许可，所以无法设计训练。历史记录仍可查看。',
-    historyFailed: '历史记录加载失败。本次训练将不参考历史来设计。',
-    busy: 'Claude 正忙，请稍后再试。',
-    rephraseWorkout: '没能生成训练，换个说法试试。',
-    rephraseLog: '没能识别，换个说法试试，例如「后蹲 5x5 100kg」。',
-    saveFailed: '保存失败，你输入的内容还在。', retry: '重试',
-    failed: '出错了：',
-    addWithForm: '用表单添加', date: '日期', noDate: '不记得了', benchmark: '经典训练', none: '—',
-    format: '训练形式', scaled: '降级', minutes: '分钟', every: '每隔（分钟）', rounds: '轮数', timeCap: '时间上限（分钟）',
-    result: '成绩', scoreRounds: '轮', extraReps: '+ 次', totalReps: '总次数', time: '用时', minShort: '分', secShort: '秒',
-    prKind: '记录类型', prHeaviest: '最大重量', prFastest: '最快用时', prMostReps: '最多次数', prFarthest: '最远/最多',
-    repMax: '几次最大', distance: '距离', amount: '数量', movement: '动作', movementPh: '搜索或输入动作',
-    sets: '组数', reps: '次数', weight: '重量', addMovement: '+ 添加动作', removeMovement: '删除',
-    note: '备注', addToList: '加入列表', doneEditing: '完成', saveChanges: '保存修改', saveAll: '全部保存',
-    removeCard: '移除', editCard: '修改', needMovement: '请添加一个动作。', dateUnknown: '日期不详',
-    cfToday: 'CrossFit.com 今日训练', cfPast: '过去 7 天', cfRest: '休息日', openOnSite: '在 crossfit.com 查看',
-    cfNone: '还没有加载 CrossFit.com 的训练。请让 Claude 更新。',
-    cfStale: (d) => `CrossFit.com 训练最后更新于 ${d}。请让 Claude 更新。`,
-    sameAsRx: '与 RX 相同', rxLabel: 'RX', intermediateLabel: '中级', beginnerLabel: '初级', yourLevel: '（你的水平）',
-    stimulus: '训练目标', yourLoads: '你的重量', whyThis: '为什么推荐这个训练',
-    lastSessions: (n) => `已记录 ${n} 次训练`,
-  },
 };
 
-// Saved choice on this device, else the browser language.
-const saved = (() => { try { return localStorage.getItem('woder.lang'); } catch { return null; } })();
-let lang = saved || (/^zh/i.test(globalThis.navigator?.language ?? '') ? 'zh' : 'en');
-
-export const getLang = () => lang;
-export function setLang(next) {
-  lang = next === 'zh' ? 'zh' : 'en';
-  try { localStorage.setItem('woder.lang', lang); } catch { /* storage unavailable */ }
-}
-
 export function t(key, ...args) {
-  const v = STRINGS[lang][key] ?? STRINGS.en[key] ?? key;
+  const v = STRINGS.en[key] ?? key;
   return typeof v === 'function' ? v(...args) : v;
 }

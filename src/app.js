@@ -1,7 +1,7 @@
 import { buildMovementSummary, recentWindow, resultText, pickCrossfit, safeUrl } from './core.js';
 import * as store from './store.js';
-import { t, getLang, setLang } from './i18n.js';
-import { wireLog, titleForBlock, styleForLayout, renderPending } from './log.js';
+import { t } from './i18n.js';
+import { wireLog, titleForBlock, styleForLayout } from './log.js';
 import { openForm } from './logform.js';
 import { wireToday } from './today.js';
 
@@ -33,7 +33,7 @@ export const historyContext = () => {
   const sessions = state.historyOk ? state.sessions : [];
   const records = sessions.flatMap((s) => (s.blocks ?? []).filter((b) => b.type === 'pr' && b.movements?.[0])
     .map((b) => `${b.movements[0].name} ${resultText(b) ?? ''}`.trim() + (s.date ? ` (${s.date})` : '')));
-  return { today, crossfit: state.crossfit, lang: getLang(), distance: state.profile.distance, profile: state.profile, records, recent: recentWindow(sessions, today), summary: buildMovementSummary(sessions, state.profile.unit) };
+  return { today, crossfit: state.crossfit, distance: state.profile.distance, profile: state.profile, records, recent: recentWindow(sessions, today), summary: buildMovementSummary(sessions, state.profile.unit) };
 };
 
 export function show(el, text) {
@@ -223,12 +223,10 @@ function wireProfile() {
 
 // ---------- Shell ----------
 function applyStrings() {
-  document.documentElement.lang = getLang();
+  document.documentElement.lang = 'en';
   for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
   for (const el of document.querySelectorAll('[data-i18n-ph]')) el.placeholder = t(el.dataset.i18nPh);
   for (const el of document.querySelectorAll('[data-i18n-aria]')) el.setAttribute('aria-label', t(el.dataset.i18nAria));
-  $('langBtn').textContent = t('langSwitch');
-  $('langBtn').lang = getLang() === 'zh' ? 'en' : 'zh';
   $('todayDate').textContent = todayISO();
   renderUnits();
 }
@@ -238,15 +236,8 @@ function renderUnits() {
   for (const b of document.querySelectorAll('#distSeg button')) b.setAttribute('aria-pressed', String(b.dataset.dist === state.profile.distance));
 }
 
-// Corner switches: language (this device only) and units (saved in the profile when signed in).
+// Corner unit switches, saved in the profile when signed in.
 function wireToggles() {
-  $('langBtn').addEventListener('click', () => {
-    setLang(getLang() === 'zh' ? 'en' : 'zh');
-    applyStrings();
-    renderToday();
-    renderHistory();
-    renderPending();
-  });
   const saveUnits = async (change) => {
     state.profile = { ...state.profile, ...change };
     renderUnits();

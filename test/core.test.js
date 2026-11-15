@@ -234,3 +234,18 @@ test('generate and revise prompts carry warm-up rules, library, language and dis
     assert.ok(p.includes('Distances: miles, feet and yards'));
   }
 });
+
+test('validateWorkout keeps CrossFit-style versions and stimulus', () => {
+  const main = { name: 'Main', movements: [{ name: 'Thruster', reps: 21, load: 30, unit: 'kg' }],
+    versions: { rx: ['For time:', '21 thrusters (65/95 lb)'], intermediate: ['For time:', '21 thrusters (45/65 lb)'], beginner: ['For time:', '15 thrusters (25/35 lb)'] },
+    stimulus: ['8-12 min', 'unbroken sets'] };
+  const w = { title: 'T', rationale: 'R', style: 'wod', focus: [], blocks: [main] };
+  const r = validateWorkout(w);
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.value.blocks[0].versions, main.versions);
+  assert.deepEqual(r.value.blocks[0].stimulus, main.stimulus);
+  const plain = validateWorkout({ ...w, blocks: [{ name: 'Main', movements: main.movements }] });
+  assert.equal(plain.value.blocks[0].versions, null);
+  assert.equal(plain.value.blocks[0].stimulus, null);
+  assert.equal(validateWorkout({ ...w, blocks: [{ ...main, versions: { rx: 'x' } }] }).ok, false);
+});

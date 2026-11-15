@@ -126,11 +126,15 @@ function checkBlocks(blocks, keepResult, defaultUnit = null) {
     for (const k of ['minutes', 'every', 'rounds', 'scoreRounds', 'scoreReps']) if (!isNumOrNull(b[k])) return { error: `bad ${k}` };
     if (!isTimeOrNull(b.scoreTime)) return { error: 'bad scoreTime' };
     if (!isStrOrNull(b.benchmark)) return { error: 'bad benchmark' };
+    const isLines = (v) => Array.isArray(v) && v.every((x) => typeof x === 'string');
+    if (b.versions != null && !['rx', 'intermediate', 'beginner'].every((k) => isLines(b.versions[k]))) return { error: 'bad versions' };
+    if (b.stimulus != null && !isLines(b.stimulus)) return { error: 'bad stimulus' };
     const block = { name: b.name, type, format: typeof b.format === 'string' ? b.format : '',
       benchmark: b.benchmark ?? null, minutes: b.minutes ?? null, every: b.every ?? null, rounds: b.rounds ?? null,
       scoreRounds: b.scoreRounds ?? null, scoreReps: b.scoreReps ?? null, scoreTime: b.scoreTime ?? null,
       prKind: type === 'pr' ? b.prKind ?? null : null, scaled: b.scaled === true,
-      note: typeof b.note === 'string' && b.note.trim() ? b.note : null, movements };
+      note: typeof b.note === 'string' && b.note.trim() ? b.note : null,
+      versions: b.versions ?? null, stimulus: b.stimulus ?? null, movements };
     block.result = resultText(block) ?? (keepResult && typeof b.result === 'string' ? b.result : null);
     out.push(block);
   }

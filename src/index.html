@@ -1,41 +1,32 @@
-<title>WODer</title>
+<title>WODCRAFT</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%23101114%22/%3E%3Cpolyline%20points%3D%227%2C14%2019%2C50%2032%2C24%2045%2C50%2057%2C14%22%20fill%3D%22none%22%20stroke%3D%22%23FF5A1F%22%20stroke-width%3D%2210%22%20stroke-linejoin%3D%22miter%22%20stroke-miterlimit%3D%2210%22/%3E%3C/svg%3E">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
-  /* Layout: one 640px training-log column; sticky tab bar; the workout card is the one framed object, like a whiteboard. */
+  /* WODCRAFT · Industrial Strength. One deliberate dark theme; orange marks actions and selection only.
+     Layout: branded cover first, then one 640px training-log column with a sticky tab bar. */
   :root {
-    --bg: #eef0f3;          /* gym-floor grey, cool bias toward the plate blue */
-    --surface: #ffffff;
-    --fg: #161a21;
-    --muted: #5a6372;
-    --line: #d5dae2;
-    --accent: #1b56cf;      /* 20 kg competition plate blue */
-    --accent-fg: #ffffff;
-    --accent-soft: #e2eafb;
-    --ok: #237a45;
-    --warn: #8a6100;
-    --danger: #c0322a;
-    --warn-soft: #fbf1d6;
-    --danger-soft: #fbe3e1;
-    --font-display: "Barlow Condensed", "PingFang SC", "Noto Sans SC", "Arial Narrow", sans-serif;
-    --font-body: "Barlow", "PingFang SC", "Noto Sans SC", "Helvetica Neue", Arial, sans-serif;
+    --bg: #101114;          /* primary background */
+    --surface: #1C1E22;     /* cards, inputs */
+    --surface-2: #26282D;   /* secondary buttons, hover */
+    --fg: #F5F5F5;
+    --muted: #A1A1AA;
+    --line: #34363B;
+    --accent: #FF5A1F;      /* industrial orange */
+    --accent-hover: #FF7140;
+    --accent-fg: #101114;   /* dark text on orange: 6:1 contrast */
+    --accent-soft: #2B1A12;
+    --ok: #4ADE80;
+    --warn: #F5B740;
+    --danger: #FF6B6B;
+    --warn-soft: #2A2414;
+    --danger-soft: #2E1719;
+    --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
+    --font-body: "Barlow", "Helvetica Neue", Arial, sans-serif;
     --font-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
-    --radius: 10px;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #101319; --surface: #191d25; --fg: #e7eaf0; --muted: #98a2b3; --line: #2a303b;
-      --accent: #6b97ff; --accent-fg: #0b1020; --accent-soft: #1c2740;
-      --ok: #5ccf88; --warn: #f0c24b; --danger: #ff7a6e; --warn-soft: #2e2713; --danger-soft: #35191a;
-      color-scheme: dark;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #101319; --surface: #191d25; --fg: #e7eaf0; --muted: #98a2b3; --line: #2a303b;
-    --accent: #6b97ff; --accent-fg: #0b1020; --accent-soft: #1c2740;
-    --ok: #5ccf88; --warn: #f0c24b; --danger: #ff7a6e; --warn-soft: #2e2713; --danger-soft: #35191a;
+    --radius: 8px;
     color-scheme: dark;
   }
 
@@ -59,21 +50,32 @@
   .seg button { border-radius: 0; }
   .seg button:first-child { border-radius: 999px 0 0 999px; }
   .seg button:last-child { border-radius: 0 999px 999px 0; border-left: 0; }
-  .seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
-  h1 { margin: 0; font: 700 34px/1 var(--font-display); letter-spacing: 0.01em; text-transform: uppercase; }
-  h1 span { color: var(--accent); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  /* Logo: geometric W + WOD (white) CRAFT (orange) */
+  .logo { display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 0; color: inherit; cursor: pointer; }
+  .mark { width: 34px; height: 34px; flex: none; }
+  .mark polyline { fill: none; stroke: var(--accent); stroke-width: 10; stroke-linejoin: miter; stroke-miterlimit: 10; }
+  .wordmark { margin: 0; font: italic 800 30px/1 var(--font-display); letter-spacing: 0.01em; text-transform: uppercase; }
+  .wordmark .craft { color: var(--accent); }
+  header { padding-bottom: 14px; border-bottom: 1px solid var(--line); position: relative; }
+  header::after { /* thin hazard stripe under the header */
+    content: ""; position: absolute; left: 0; bottom: -1px; width: 96px; height: 3px;
+    background: repeating-linear-gradient(-45deg, var(--accent) 0 8px, transparent 8px 12px);
+  }
   .today-date { font: 500 13px/1 var(--font-data); color: var(--muted); }
 
   nav.tabs {
     position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
-    padding: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 999px;
+    padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
   }
   nav.tabs button {
     font: 600 15px/1 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase;
     padding: 10px 8px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer;
   }
-  nav.tabs button[aria-selected="true"] { background: var(--fg); color: var(--bg); }
+  nav.tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-fg); }
+  nav.tabs button { border-radius: 7px; }
+  nav.tabs button:hover:not([aria-selected="true"]) { color: var(--fg); background: var(--surface-2); }
 
   .banner { padding: 10px 14px; border-radius: var(--radius); background: var(--warn-soft); color: var(--fg); font-size: 14px; }
   .banner.error { background: var(--danger-soft); }
@@ -95,7 +97,7 @@
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip {
     font: 600 14px/1 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase;
-    padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer;
+    padding: 9px 14px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer;
   }
   .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
 
@@ -104,8 +106,11 @@
     font: 600 16px/1 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase;
     padding: 12px 18px; border-radius: var(--radius); cursor: pointer; border: 1px solid transparent;
   }
-  button.primary { background: var(--accent); color: var(--accent-fg); }
-  button.secondary { background: transparent; color: var(--fg); border-color: var(--line); }
+  button.primary { background: var(--accent); color: var(--accent-fg); font-weight: 700; }
+  button.secondary { background: var(--surface-2); color: var(--fg); border-color: var(--line); }
+  button.primary:hover:not(:disabled) { background: var(--accent-hover); }
+  button.secondary:hover:not(:disabled), .chip:hover { border-color: var(--accent); }
+  button, .chip { transition: background-color 120ms, border-color 120ms; }
   button:disabled { opacity: 0.55; cursor: progress; }
   button.danger { color: var(--danger); }
 
@@ -115,7 +120,7 @@
   }
 
   /* The workout card: the whiteboard. */
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
   .card-head { display: grid; gap: 6px; }
   .card-title { margin: 0; font: 700 26px/1.05 var(--font-display); text-transform: uppercase; text-wrap: balance; }
   .tag { justify-self: start; font: 600 12px/1 var(--font-display); letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
@@ -181,14 +186,39 @@
 
   @media (prefers-reduced-motion: no-preference) {
     .card { animation: rise 0.25s ease-out; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    button, .chip { transition: none; }
     @keyframes rise { from { transform: translateY(4px); opacity: 0.6; } to { transform: none; opacity: 1; } }
   }
+
+  /* Cover */
+  .cover {
+    min-height: 100%; display: grid; place-items: center; position: relative; overflow: hidden;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 40px;
+  }
+  .cover-inner { position: relative; z-index: 1; width: 100%; max-width: 560px; display: grid; gap: 22px; justify-items: center; text-align: center; }
+  .cover img { width: 100%; max-width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--line); display: block; }
+  .tagline { margin: 0; font: italic 800 clamp(28px, 7vw, 44px)/1.02 var(--font-display); text-transform: uppercase; letter-spacing: 0.01em; text-wrap: balance; }
+  .tagline span { color: var(--accent); }
+  .cover button.primary { font-size: 18px; padding: 16px 26px; }
 </style>
 
-<div class="wrap">
+<section class="cover" id="cover" aria-label="WODCRAFT">
+  <div class="cover-inner">
+    <img src="assets/cover.jpg" alt="WODCRAFT, CrossFit workout designer: kettlebell, rings and a plyo box in a dark gym" width="1100" height="1204">
+    <p class="tagline">Build your WOD. <span>Forge your limits.</span></p>
+    <button type="button" class="primary" id="enterBtn" data-i18n="enterApp">Enter Workout Designer</button>
+  </div>
+</section>
+
+<div class="wrap" id="app" hidden>
   <header>
     <div class="brand">
-      <h1>WOD<span>er</span></h1>
+      <button type="button" class="logo" id="logoBtn" aria-label="WODCRAFT cover">
+        <svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><polyline points="7,14 19,50 32,24 45,50 57,14"/></svg>
+        <h1 class="wordmark">WOD<span class="craft">CRAFT</span></h1>
+      </button>
       <span class="today-date" id="todayDate"></span>
     </div>
     <div class="toggles">

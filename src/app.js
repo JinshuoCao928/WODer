@@ -281,7 +281,21 @@ export function setAiAvailable(on) {
 
 const use = (name) => (window.claude?.use ? window.claude.use(name).catch(() => null) : Promise.resolve(null));
 
+// Branded cover: shown until the athlete enters once on this device; the logo brings it back.
+function wireCover() {
+  const showApp = (on) => { $('cover').hidden = on; $('app').hidden = !on; window.scrollTo(0, 0); };
+  let entered = false;
+  try { entered = localStorage.getItem('wodcraft.entered') === '1'; } catch { /* storage unavailable */ }
+  showApp(entered);
+  $('enterBtn').addEventListener('click', () => {
+    try { localStorage.setItem('wodcraft.entered', '1'); } catch { /* storage unavailable */ }
+    showApp(true);
+  });
+  $('logoBtn').addEventListener('click', () => showApp(false));
+}
+
 async function start() {
+  wireCover();
   applyStrings();
   wireTabs();
   wireProfile();

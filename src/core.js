@@ -1,4 +1,4 @@
-// Pure logic for WODer: no DOM, no runtime capabilities. Tested with `npm test`.
+// Pure logic for WODCRAFT: no DOM, no runtime capabilities. Tested with `npm test`.
 import { MOVEMENTS } from './library.js';
 import { WARMUPS } from './warmups.js';
 
